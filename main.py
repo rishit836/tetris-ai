@@ -4,22 +4,30 @@ import sys
 import random
 
 
+
 class block:
     instances = []
+    moving_instance = None
     def __init__(self,x,y,block_type,screen,grid_size,grid):
-        self.x = x
-        self.y = y
         self.screen=screen
+
         self.block_type=block_type
         self.grid_state = grid
+        # self.block_type="I"
         self.grid_size = grid_size
         self.instances.append(self)
         self.rotation=0
         self.color= self.get_color()
         self.shapes= self.get_shapes()
+        self.x = x
+        self.y = y - (self.grid_size*(self.block_height+1))
         self.current_shape=self.shapes[self.rotation]
         self._block = []
         self.moving =True
+        self.falling_black = True
+        self.block_height = 0
+        self.block_width = 0
+
 
     def get_color(self):
         if self.block_type=="I":
@@ -40,6 +48,7 @@ class block:
             return "white"
     def get_shapes(self):
         if self.block_type=="I":
+            self.block_height=0
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -52,6 +61,7 @@ class block:
                  [0,0,1,0]]
             ]
         elif self.block_type=="J":
+            self.block_height=2
             return [
                 [
                     [1,0,0],
@@ -74,6 +84,7 @@ class block:
                  [1,1,0]],
             ]
         elif self.block_type=="L":
+            self.block_height=3
             return [
                 [
                     [0,1,0],
@@ -97,6 +108,7 @@ class block:
                 ],
             ]
         elif self.block_type=="O":
+            self.block_height=2
             return [
                 [
                     [1,1],
@@ -104,6 +116,7 @@ class block:
                 ]
             ]
         elif self.block_type=="S":
+            self.block_height=3
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -113,6 +126,7 @@ class block:
                  [0, 0, 1]],
             ]
         elif self.block_type=="Z":
+            self.block_height=3
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -122,6 +136,7 @@ class block:
                  [1, 0, 0]]
             ]
         elif self.block_type=="T":
+            self.block_height=2
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -136,6 +151,7 @@ class block:
                  [1, 1, 0],
                  [0, 1, 0]],
             ]
+
     def draw_piece(self):
         self._block = []
         for i,row in enumerate(self.current_shape):
@@ -153,12 +169,15 @@ class block:
                 if object.x == self.x and object.y == self.y:
                     print("collision")
                     self.moving = False
+                    self.falling_black = False
     def move(self):
-        if self.moving and self.y<self.grid_size*18:
+        if self.moving and self._block[-1].center[1]<self.grid_size*20:
             self.set_move()
             self.y+=self.grid_size
         else:
             self.moving=False
+            self.grid_state=self.update_grid()
+            print(self.grid_state)
 
     def update_grid(self):
         # for r in range(len(self.grid_state)):
@@ -181,6 +200,18 @@ class block:
 
         return self.grid_state
 
+class block_spawner():
+    def __init__(self,grid_size,block_types,screen,grid):
+        self.grid_size = grid_size
+        self.block_types = block_types
+        self.screen = screen
+        self.block_type = random.choice(self.block_types)
+        self.grid = grid
+        self.init_block = block(self.grid_size*4,self.grid_size*1,self.block_type,self.screen,self.grid_size,self.grid)
+        self.init_block.draw_piece()
+    def update_block(self):
+        self.init_block.move()
+        self.init_block.draw_piece()
 
 
 class Game:
@@ -225,18 +256,22 @@ class Game:
                 pygame.draw.line(self.screen,"white",(self.margin_left,self.margin_top+(self.grid_size*row)),(self.margin_left+(self.grid_size*column),self.margin_top+self.grid_size*row))
                 pygame.draw.line(self.screen,"white",(self.margin_left+(self.grid_size*column),self.margin_top),(self.margin_left+(self.grid_size*column),self.margin_top+self.grid_size*self.num_grid_rows))
 
+
     def visual_run(self):
         print("mode:visual")
-
+        spawner = block_spawner(self.grid_size,["I","J","L","O","S","Z","T"],self.screen,self.grid)
         while self.running:
             for event in pygame.event.get():
                 if event.type==pygame.QUIT:
                     self.running=False
                     sys.exit()
             self.screen.fill("black")
+            spawner.update_block()
 
 
-            # pygame.time.delay(700-(self.score//100))
+
+
+            # pygame.time.delay(300)
 
 
             self.draw_grid()
