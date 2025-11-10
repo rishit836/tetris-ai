@@ -3,8 +3,6 @@ import os
 import sys
 import random
 
-
-
 class block:
     instances = []
     moving_instance = None
@@ -13,7 +11,6 @@ class block:
 
         self.block_type=block_type
         self.grid_state = grid
-        # self.block_type="I"
         self.grid_size = grid_size
         self.instances.append(self)
         self.rotation=0
@@ -167,7 +164,7 @@ class block:
                 continue
             else:
                 if object.x == self.x and object.y == self.y:
-                    print("collision")
+                    # print("collision")
                     self.moving = False
                     self.falling_black = False
     def move(self):
@@ -177,7 +174,7 @@ class block:
         else:
             self.moving=False
             self.grid_state=self.update_grid()
-            print(self.grid_state)
+            # print(self.grid_state)
 
     def update_grid(self):
         # for r in range(len(self.grid_state)):
@@ -185,18 +182,28 @@ class block:
         #         if self.grid_state[r][c] == "B":
         #             self.grid_state[r][c] = 0
 
-            # Compute grid indices from pixel x, y and grid_size
-        base_row = self.y // self.grid_size
-        base_col = self.x // self.grid_size
+        for b in self._block:
+            base_row = b.center[1] // self.grid_size
+            base_col = b.center[0] // self.grid_size
+            print(base_row, base_col)
+            print(b.x,b.y)
 
-        # Stamp current shape into the grid as "B"
-        for i, row in enumerate(self.current_shape):
-            for j, val in enumerate(row):
-                if val == 1:
-                    gr = base_row + i
-                    gc = base_col + j
-                    if 0 <= gr < len(self.grid_state) and 0 <= gc < len(self.grid_state[gr]):
-                        self.grid_state[gr][gc] = "B"
+
+
+        # Compute grid indices from pixel x, y and grid_size
+        # base_row = self.y // self.grid_size
+        # base_col = self.x // self.grid_size
+        #
+        # # Stamp current shape into the grid as "B"
+        # for i, row in enumerate(self.current_shape):
+        #     for j, val in enumerate(row):
+        #         if val == 1:
+        #
+        #             gr = base_row + i
+        #             gc = base_col + j
+        #             if gr < 0 or gr >= len(self.grid_state) or gc < 0 or gc >= len(self.grid_state[0]):
+        #                 continue
+        #             self.grid_state[gr][gc] = "B"
 
         return self.grid_state
 
@@ -208,11 +215,19 @@ class block_spawner():
         self.block_type = random.choice(self.block_types)
         self.grid = grid
         self.init_block = block(self.grid_size*4,self.grid_size*1,self.block_type,self.screen,self.grid_size,self.grid)
-        self.init_block.draw_piece()
-    def update_block(self):
-        self.init_block.move()
+        self.init_block.moving = True
         self.init_block.draw_piece()
 
+    def update_block(self):
+        if  self.init_block.moving:
+            self.init_block.move()
+            self.init_block.draw_piece()
+        else:
+            self.block_type = random.choice(self.block_types)
+
+            self.init_block = block(self.grid_size * 4, self.grid_size * 1, self.block_type, self.screen,
+                                    self.grid_size, self.grid)
+            self.init_block.draw_piece()
 
 class Game:
     def __init__(self):
