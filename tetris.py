@@ -214,9 +214,10 @@ class game:
                 for rect_obj in self.block_data:
                     # reset the grid before
                     if (rect_obj.y//self.grid_size) -1< len(self.grid) and (rect_obj.x//self.grid_size)-1<len(self.grid[0]):
-                        if last_block.y//self.grid_size+1<len(self.grid):
-                            if 2 not in self.grid[(last_block.y//self.grid_size)+1][last_block.x//self.grid_size-1:last_block.x//self.grid_size-self.init_block.block_width:-1]:
-                                print(self.grid[(last_block.y//self.grid_size)+1][last_block.x//self.grid_size-1:last_block.x//self.grid_size-self.init_block.block_width:-1])
+                        if last_block.y//self.grid_size<len(self.grid):
+                            print(self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1])
+
+                            if 2 not in self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]:
                                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
                                 # move the blocks down
                                 rect_obj.y+=self.grid_size
