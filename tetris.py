@@ -1,6 +1,7 @@
 import sys
 import random
 import numpy as np
+import time
 import pygame
 
 
@@ -158,16 +159,21 @@ class game:
         self.clock = pygame.time.Clock()
 
         self.grid = np.zeros((self.num_grid_rows,self.num_grid_cols))
-        self.init_block = block(self.grid_size*3,0,self.screen,self.grid_size,self.grid,self.margin_top)
+        self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
         self.pieces = []
 
     def draw_grid(self):
         for i ,col in enumerate(self.grid):
             for j ,cell in enumerate(col):
                 if cell == 0:
+
                     pygame.draw.rect(self.screen, "white", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-                else:
+
+                elif cell == 1:
+
                     pygame.draw.rect(self.screen, "red", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
+                else:
+                    pygame.draw.rect(self.screen, "green", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
 
 
     def update_grid(self):
@@ -178,11 +184,26 @@ class game:
         3)THE BLOCK IF ROTATED THEN SAME SHOULD BE HIGHLIGHTED IN THE GRID
         3)BLOCK SHOULD STOP IF THERE IS A COLLISION
         """
-
         # block spawner
         if self.init_block is not None:
+            self.block_data = self.init_block._blocks
             for rect_obj in self.init_block._blocks:
                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 1
+        else:
+            for rect_obj in self.block_data:
+                self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 2
+            self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
+
+    def block_move(self):
+        if self.init_block is not None:
+            self.block_data = self.init_block._blocks
+            for rect_obj in self.block_data:
+                if rect_obj.y < self.HEIGHT - self.margin_bottom - self.grid_size:
+                    self.grid[(rect_obj.y // self.grid_size) - 1][
+                        (rect_obj.x // self.grid_size) - 1] = 0  # reset the grid position before
+                    rect_obj.y += self.grid_size
+
+
 
 
 
@@ -194,14 +215,18 @@ class game:
                 if event.type == pygame.QUIT:
                     self.running = False
                     sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_d:
+                        print("the block instance is deleted.")
+                        self.init_block = None
             self.screen.fill("black")
-            self.draw_grid()
             self.update_grid()
-            for rect_obj in self.init_block._blocks:
-                # pygame.draw.rect(self.screen, "red", rect_obj, self.grid_size, 1, 1, 1, 1, 1)
-                print(rect_obj.x//self.grid_size,rect_obj.y//self.grid_size)
+            self.draw_grid()
+            pygame.time.wait(100)
+
             pygame.display.update()
             self.clock.tick(self.FPS)
+            self.block_move()
 
 if __name__=="__main__":
     game = game()
