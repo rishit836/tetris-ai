@@ -25,6 +25,7 @@ class block:
     def get_shapes(self):
         if self.block_type=="I":
             self.block_height=0
+            self.block_width=4
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -38,6 +39,7 @@ class block:
             ]
         if self.block_type=="J":
             self.block_height=2
+            self.block_width=3
             return [
                 [
                     [1,0,0],
@@ -61,6 +63,7 @@ class block:
             ]
         elif self.block_type=="L":
             self.block_height=3
+            self.block_width=3
             return [
                 [
                     [0,1,0],
@@ -85,6 +88,7 @@ class block:
             ]
         elif self.block_type=="O":
             self.block_height=2
+            self.block_width=2
             return [
                 [
                     [1,1],
@@ -93,6 +97,7 @@ class block:
             ]
         elif self.block_type=="S":
             self.block_height=3
+            self.block_width=3
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -103,6 +108,7 @@ class block:
             ]
         elif self.block_type=="Z":
             self.block_height=3
+            self.block_width=3
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -113,6 +119,7 @@ class block:
             ]
         elif self.block_type=="T":
             self.block_height=2
+            self.block_width=2
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -161,6 +168,7 @@ class game:
         self.grid = np.zeros((self.num_grid_rows,self.num_grid_cols))
         self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
         self.pieces = []
+        self.collision_blocks = []
 
     def draw_grid(self):
         for i ,col in enumerate(self.grid):
@@ -187,8 +195,11 @@ class game:
         # block spawner
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
+
             for rect_obj in self.init_block._blocks:
-                self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 1
+                if (rect_obj.y // self.grid_size) - 1 < len(self.grid) and (rect_obj.x // self.grid_size) - 1 < len(self.grid[0]):
+
+                    self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 1
         else:
             for rect_obj in self.block_data:
                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 2
@@ -197,11 +208,22 @@ class game:
     def block_move(self):
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
-            for rect_obj in self.block_data:
-                if rect_obj.y < self.HEIGHT - self.margin_bottom - self.grid_size:
-                    self.grid[(rect_obj.y // self.grid_size) - 1][
-                        (rect_obj.x // self.grid_size) - 1] = 0  # reset the grid position before
-                    rect_obj.y += self.grid_size
+            last_block = self.block_data[-1]
+
+            if last_block.y//self.grid_size<=(self.num_grid_rows-1) :
+                for rect_obj in self.block_data:
+                    # reset the grid before
+                    if (rect_obj.y//self.grid_size) -1< len(self.grid) and (rect_obj.x//self.grid_size)-1<len(self.grid[0]):
+                        if last_block.y//self.grid_size+1<len(self.grid):
+                            if 2 not in self.grid[(last_block.y//self.grid_size)+1][last_block.x//self.grid_size-1:last_block.x//self.grid_size-self.init_block.block_width:-1]:
+                                print(self.grid[(last_block.y//self.grid_size)+1][last_block.x//self.grid_size-1:last_block.x//self.grid_size-self.init_block.block_width:-1])
+                                self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
+                                # move the blocks down
+                                rect_obj.y+=self.grid_size
+                        else:
+                            self.grid[(rect_obj.y // self.grid_size) - 1][(rect_obj.x // self.grid_size) - 1] = 0
+                            # move the blocks down
+                            rect_obj.y += self.grid_size
 
 
 
@@ -223,10 +245,10 @@ class game:
             self.update_grid()
             self.draw_grid()
             pygame.time.wait(100)
-
+            self.block_move()
             pygame.display.update()
             self.clock.tick(self.FPS)
-            self.block_move()
+
 
 if __name__=="__main__":
     game = game()
