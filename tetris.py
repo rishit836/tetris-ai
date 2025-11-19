@@ -14,8 +14,10 @@ class block:
         self.grid = grid
         self.x = x
         self.y = y +margin_top
-        self.block_type = random.choice(self.block_types)
+        # self.block_type = random.choice(self.block_types)
+        self.block_type = "O"
         self.block_shape = self.get_shapes()
+
 
         self.create_block_list()
 
@@ -152,14 +154,14 @@ class block:
 
     def control_block(self,move):
         if move == "right":
-            if (self.x // self.grid_size)<len(self.grid[0]):
+            if (self.x // self.grid_size)<len(self.grid[0]) and self._blocks[0].x+(self.block_width*self.grid_size)<self.grid_size*11:
                 if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)] == 0:
                     for rect_obj in self._blocks:
                         self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
                         rect_obj.x+=self.grid_size
 
         if move == "left":
-            if (self.x // self.grid_size)>0:
+            if (self.x // self.grid_size)>0  and self._blocks[0].x//self.grid_size>1:
                 if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)-1] == 0:
                     for rect_obj in self._blocks:
                         self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
@@ -203,6 +205,21 @@ class game:
                     pygame.draw.rect(self.screen, "red", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
                 else:
                     pygame.draw.rect(self.screen, "green", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
+
+
+    def check_rows(self):
+        for i in range(len(self.grid)-1,-1,-1):
+            row = self.grid[i]
+            if 0 not in row and 1 not in row:
+                self.grid = np.delete(self.grid,i,0)
+                self.grid = np.insert(self.grid,[0]*len(self.grid),0,axis=0)
+                self.score += 10
+                print(f"score: {self.score}")
+                break
+        pygame.display.set_caption(
+            f"Tetris | Score: {self.score}"
+        )
+
 
 
     def update_grid(self):
@@ -284,6 +301,7 @@ class game:
                 self.start_time = pygame.time.get_ticks()
                 self.block_move()
             pygame.display.update()
+            self.check_rows()
             self.clock.tick(self.FPS)
 
 
