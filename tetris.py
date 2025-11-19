@@ -1,10 +1,7 @@
 import sys
 import random
 import numpy as np
-import time
 import pygame
-
-
 
 class block:
     block_types = ["I","J","L","O","S","Z","T"]
@@ -13,19 +10,20 @@ class block:
         self.screen=screen
         self.grid_size = grid_size
         self.margin_top = margin_top
-        self.block_type = random.choice(self.block_types)
-        self.block_shape = self.get_shapes()
+        self.rotation = 0
         self.grid = grid
         self.x = x
         self.y = y +margin_top
-        print("DEBUG:::",y,self.y)
-        self.rotation = 0
+        self.block_type = random.choice(self.block_types)
+        self.block_shape = self.get_shapes()
+
         self.create_block_list()
 
     def get_shapes(self):
         if self.block_type=="I":
             self.block_height=0
-            self.block_width=4
+            if self.rotation==0:
+                self.block_width=4
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -39,7 +37,8 @@ class block:
             ]
         if self.block_type=="J":
             self.block_height=2
-            self.block_width=3
+            if self.rotation == 0:
+                self.block_width = 3
             return [
                 [
                     [1,0,0],
@@ -63,7 +62,8 @@ class block:
             ]
         elif self.block_type=="L":
             self.block_height=3
-            self.block_width=3
+            if self.rotation == 0:
+                self.block_width = 2
             return [
                 [
                     [0,1,0],
@@ -97,7 +97,8 @@ class block:
             ]
         elif self.block_type=="S":
             self.block_height=3
-            self.block_width=3
+            if self.rotation==0:
+                self.block_width=2
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -108,7 +109,8 @@ class block:
             ]
         elif self.block_type=="Z":
             self.block_height=3
-            self.block_width=3
+            if self.rotation==0:
+                self.block_width=2
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -119,7 +121,8 @@ class block:
             ]
         elif self.block_type=="T":
             self.block_height=2
-            self.block_width=2
+            if self.rotation == 0:
+                self.block_width = 3
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -138,9 +141,9 @@ class block:
     def create_block_list(self):
         self._blocks = []
         for i in range(len(self.block_shape[self.rotation])):
-            # print(self.block_shape[self.rotation][i])
+
             for j in range(len(self.block_shape[self.rotation][i])):
-                # print(self.block_shape[self.rotation][i][j])
+
                 if self.block_shape[self.rotation][i][j] == 1:
                     rect_obj = pygame.Rect(self.x+self.grid_size*j,self.y+self.grid_size*i,self.grid_size,self.grid_size)
                     print(i)
@@ -185,13 +188,6 @@ class game:
 
 
     def update_grid(self):
-        """
-        TODO:
-        1)BLOCK SPAWNER
-        2)PLACE THE BLOCK IN THE GRID WHEN SPAWNED BASED ON X AND Y
-        3)THE BLOCK IF ROTATED THEN SAME SHOULD BE HIGHLIGHTED IN THE GRID
-        3)BLOCK SHOULD STOP IF THERE IS A COLLISION
-        """
         # block spawner
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
@@ -210,24 +206,28 @@ class game:
             self.block_data = self.init_block._blocks
             last_block = self.block_data[-1]
 
+            # checking if the last block has reached the bottom or not
             if last_block.y//self.grid_size<=(self.num_grid_rows-1) :
+                # if the block hasnt reached the bottom we check what's beneath the last piece of the block
                 for rect_obj in self.block_data:
-                    # reset the grid before
-                    if (rect_obj.y//self.grid_size) -1< len(self.grid) and (rect_obj.x//self.grid_size)-1<len(self.grid[0]):
+                    # checking if the index in the range or not
+                    if (rect_obj.y//self.grid_size) -1< len(self.grid):
                         if last_block.y//self.grid_size<len(self.grid):
-                            print(self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1])
-
+                            # row beneath the last block of the active/falling piece
+                            print(np.flip(self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]))
+                            # checking if the row beneath has a block already placed or not
                             if 2 not in self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]:
+                                # reset the grid behind the block after it has fallen
                                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
                                 # move the blocks down
                                 rect_obj.y+=self.grid_size
                         else:
+                            # reset the grid behind the block after it has fallen
                             self.grid[(rect_obj.y // self.grid_size) - 1][(rect_obj.x // self.grid_size) - 1] = 0
                             # move the blocks down
                             rect_obj.y += self.grid_size
-
-
-
+            else:
+                self.init_block = None
 
 
     def visual_run(self):
