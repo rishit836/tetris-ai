@@ -149,6 +149,23 @@ class block:
                     print(i)
                     self._blocks.append(rect_obj)
         print(self._blocks)
+
+    def control_block(self,move):
+        if move == "right":
+            if (self.x // self.grid_size)<len(self.grid[0]):
+                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)] == 0:
+                    for rect_obj in self._blocks:
+                        self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                        rect_obj.x+=self.grid_size
+
+        if move == "left":
+            if (self.x // self.grid_size)>0:
+                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)-1] == 0:
+                    for rect_obj in self._blocks:
+                        self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+
+                        rect_obj.x-=self.grid_size
+
 class game:
     def __init__(self):
         self.FPS = 60
@@ -172,6 +189,7 @@ class game:
         self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
         self.pieces = []
         self.collision_blocks = []
+        self.start_time = 0
 
     def draw_grid(self):
         for i ,col in enumerate(self.grid):
@@ -199,7 +217,14 @@ class game:
         else:
             for rect_obj in self.block_data:
                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 2
+
+            # game over logic
             self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
+
+            for rect_obj in self.init_block._blocks:
+                if self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] !=0:
+                    self.running = False
+                    print("Game Over!")
 
     def block_move(self):
         if self.init_block is not None:
@@ -221,6 +246,9 @@ class game:
                                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
                                 # move the blocks down
                                 rect_obj.y+=self.grid_size
+                            else:
+                                self.init_block = None
+                                break
                         else:
                             # reset the grid behind the block after it has fallen
                             self.grid[(rect_obj.y // self.grid_size) - 1][(rect_obj.x // self.grid_size) - 1] = 0
@@ -232,7 +260,7 @@ class game:
 
     def visual_run(self):
         print("mode:visual")
-
+        self.start_time = pygame.time.get_ticks()
         while self.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -242,11 +270,19 @@ class game:
                     if event.key == pygame.K_d:
                         print("the block instance is deleted.")
                         self.init_block = None
+                    if event.key == pygame.K_RIGHT:
+                        if self.init_block is not None:
+                            self.init_block.control_block("right")
+                    if event.key == pygame.K_LEFT:
+                        if self.init_block is not None:
+                            self.init_block.control_block("left")
+
             self.screen.fill("black")
             self.update_grid()
             self.draw_grid()
-            pygame.time.wait(100)
-            self.block_move()
+            if self.start_time + 250 < pygame.time.get_ticks():
+                self.start_time = pygame.time.get_ticks()
+                self.block_move()
             pygame.display.update()
             self.clock.tick(self.FPS)
 
