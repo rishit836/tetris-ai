@@ -14,8 +14,8 @@ class block:
         self.grid = grid
         self.x = x
         self.y = y +margin_top
-        # self.block_type = random.choice(self.block_types)
-        self.block_type = "O"
+        self.block_type = random.choice(self.block_types)
+
         self.block_shape = self.get_shapes()
 
 
@@ -256,9 +256,18 @@ class game:
                     if (rect_obj.y//self.grid_size) -1< len(self.grid):
                         if last_block.y//self.grid_size<len(self.grid):
                             # row beneath the last block of the active/falling piece
+                            if (last_block.x//self.grid_size)-(self.init_block.block_width+1) <0:
+                                first_index = 0
+                                last_index = self.init_block.block_width+1
+                                iterator = 1
+                            else:
+                                first_index = (last_block.x//self.grid_size-1)
+                                last_index = (last_block.x//self.grid_size)-(self.init_block.block_width+1)
+                                iterator = -1
                             print(np.flip(self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]))
+                            print(first_index,last_index)
                             # checking if the row beneath has a block already placed or not
-                            if 2 not in self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]:
+                            if 2 not in self.grid[(last_block.y//self.grid_size)][first_index:last_index:iterator]:
                                 # reset the grid behind the block after it has fallen
                                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
                                 # move the blocks down
