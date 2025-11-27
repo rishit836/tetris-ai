@@ -10,13 +10,16 @@ class block:
         self.screen=screen
         self.grid_size = grid_size
         self.margin_top = margin_top
+        self.margin_left = 40
         self.rotation = 0
         self.grid = grid
         self.x = x
         self.y = y +margin_top
-        # self.block_type = random.choice(self.block_types)
-        self.block_type = "L"
+        self.block_type = random.choice(self.block_types)
+
+        self.block_indices = []
         self.block_shape = self.get_shapes()
+        # hard coding the blocks to check beneath
 
 
         self.create_block_list()
@@ -26,6 +29,7 @@ class block:
             self.block_height=0
             if self.rotation==0:
                 self.block_width=4
+                self.block_indices = [0,1,2,3]
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -41,6 +45,7 @@ class block:
             self.block_height=2
             if self.rotation == 0:
                 self.block_width = 3
+                self.block_indices = [1,2,3]
             return [
                 [
                     [1,0,0],
@@ -66,6 +71,7 @@ class block:
             self.block_height=3
             if self.rotation == 0:
                 self.block_width = 2
+                self.block_indices = [2,3]
             return [
                 [
                     [0,1,0],
@@ -91,6 +97,7 @@ class block:
         elif self.block_type=="O":
             self.block_height=2
             self.block_width=2
+            self.block_indices = [0,1]
             return [
                 [
                     [1,1],
@@ -101,6 +108,7 @@ class block:
             self.block_height=3
             if self.rotation==0:
                 self.block_width=2
+                self.block_indices = [3,4]
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -113,6 +121,7 @@ class block:
             self.block_height=3
             if self.rotation==0:
                 self.block_width=2
+                self.block_indices = [0,3,4]
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -125,6 +134,7 @@ class block:
             self.block_height=2
             if self.rotation == 0:
                 self.block_width = 3
+                self.block_indices = [1,2,3]
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -154,17 +164,17 @@ class block:
 
     def control_block(self,move):
         if move == "right":
-            if (self.x // self.grid_size)<len(self.grid[0]) and self._blocks[0].x+(self.block_width*self.grid_size)<self.grid_size*11:
+            if ((self.x-self.margin_left) // self.grid_size)<=len(self.grid[0]) and ((self._blocks[0].x-self.margin_left)+(self.block_width*self.grid_size))//self.grid_size<11:
                 if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)] == 0:
                     for rect_obj in self._blocks:
-                        self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
                         rect_obj.x+=self.grid_size
 
         if move == "left":
-            if (self.x // self.grid_size)>0  and self._blocks[0].x//self.grid_size>1:
+            if ((self.x -self.margin_left)// self.grid_size)>0  and (self._blocks[0].x-self.margin_left)//self.grid_size>1:
                 if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)-1] == 0:
                     for rect_obj in self._blocks:
-                        self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
 
                         rect_obj.x-=self.grid_size
 
@@ -192,17 +202,14 @@ class game:
         self.pieces = []
         self.collision_blocks = []
         self.start_time = 0
-        self.expensive_checking_piece = ["Z","S"]
+
 
     def draw_grid(self):
         for i ,col in enumerate(self.grid):
             for j ,cell in enumerate(col):
                 if cell == 0:
-
                     pygame.draw.rect(self.screen, "white", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-
                 elif cell == 1:
-
                     pygame.draw.rect(self.screen, "red", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
                 else:
                     pygame.draw.rect(self.screen, "green", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
@@ -229,69 +236,58 @@ class game:
             self.block_data = self.init_block._blocks
 
             for rect_obj in self.init_block._blocks:
-                if (rect_obj.y // self.grid_size) - 1 < len(self.grid) and (rect_obj.x // self.grid_size) - 1 < len(self.grid[0]):
+                if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
+                    if ((rect_obj.y - self.margin_top) // self.grid_size) - 1 < len(self.grid) and ((rect_obj.x - self.margin_left) // self.grid_size) - 1 <= len(self.grid[0]):
+                        self.grid[((rect_obj.y - self.margin_top) // self.grid_size) - 1][
+                            ((rect_obj.x - self.margin_left) // self.grid_size) - 1] = 1
 
-                    self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 1
         else:
             for rect_obj in self.block_data:
-                self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 2
+                self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 2
 
             # game over logic
             self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
 
             for rect_obj in self.init_block._blocks:
-                if self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] !=0:
-                    self.running = False
-                    print("Game Over!")
+                if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
+                    if self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] !=0:
+                        self.running = False
+                        print("Game Over!")
 
     def block_move(self):
 
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
             last_block = self.block_data[-1]
-            print("new block data collected")
-
-
             # checking if the last block has reached the bottom or not
-            if last_block.y//self.grid_size<=(self.num_grid_rows-1) :
+            if (last_block.y-self.margin_top)//self.grid_size<=(self.num_grid_rows)-1 :
                 # if the block hasnt reached the bottom we check what's beneath the last piece of the block
-                for rect_obj in self.block_data:
-                    # checking if the index in the range or not
-                    if (rect_obj.y//self.grid_size) -1< len(self.grid):
-                        if last_block.y//self.grid_size<len(self.grid):
-                            # row beneath the last block of the active/falling piece
-                            if (last_block.x//self.grid_size)-(self.init_block.block_width+1) <=0:
-                                first_index = (last_block.x // self.grid_size) - self.init_block.block_width
-                                last_index = self.init_block.block_width+1
+                self.move = True
+                for i in self.init_block.block_indices:
 
-                            else:
-                                first_index = (last_block.x//self.grid_size)
-                                last_index = (last_block.x//self.grid_size)-(self.init_block.block_width)+1
+                    checking_block = self.block_data[i]
+                    col = ((checking_block.x -self.margin_left)//self.grid_size)-1
+                    row = ((checking_block.y-self.margin_top)//self.grid_size)
+                    print(i,"th block sees: ",self.grid[row][col])
+                    print(row,col)
+                    if row <= len(self.grid):
+                        if self.grid[row][col] == 2:
+                            self.move = False
 
-                            if last_index>first_index:
-                                iterator = 1
-                            else:
-                                iterator = -1
-                            print(np.flip(self.grid[(last_block.y//self.grid_size)][first_index:last_index-1:iterator]))
-                            print(first_index,last_index)
-                            # checking if the row beneath has a block already placed or not
-                            if 2 not in self.grid[(last_block.y//self.grid_size)][first_index:last_index:iterator]:
-                                # reset the grid behind the block after it has fallen
-                                self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
-                                # move the blocks down
-                                rect_obj.y+=self.grid_size
-                                # print("no collision detected",self.grid[(last_block.y//self.grid_size)][first_index:last_index:iterator])
-                            else:
-                                print("block beneath")
-                                self.init_block = None
-                                break
-                        else:
-                            # reset the grid behind the block after it has fallen
-                            self.grid[(rect_obj.y // self.grid_size) - 1][(rect_obj.x // self.grid_size) - 1] = 0
-                            # move the blocks down
-                            rect_obj.y += self.grid_size
+                if self.move:
+                    for rect_obj in self.block_data:
+                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
+                        rect_obj.y+=self.grid_size
+                else:
+                    self.init_block = None
+
+
+
             else:
                 self.init_block = None
+
+        else:
+            self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
 
 
     def visual_run(self):
@@ -319,6 +315,7 @@ class game:
             if self.start_time + 250 < pygame.time.get_ticks():
                 self.start_time = pygame.time.get_ticks()
                 self.block_move()
+
             pygame.display.update()
             self.check_rows()
             self.clock.tick(self.FPS)
