@@ -14,11 +14,11 @@ class block:
         self.rotation = 0
         self.grid = grid
         self.x = x
-        self.y = y +margin_top
         self.block_type = random.choice(self.block_types)
 
         self.block_indices = []
         self.block_shape = self.get_shapes()
+        self.y = y +margin_top+(self.block_height*self.grid_size)
         # hard coding the blocks to check beneath
 
 
@@ -95,9 +95,9 @@ class block:
                 ],
             ]
         elif self.block_type=="O":
-            self.block_height=2
+            self.block_height=1
             self.block_width=2
-            self.block_indices = [0,1]
+            self.block_indices = [2,3]
             return [
                 [
                     [1,1],
@@ -253,6 +253,7 @@ class game:
                     if self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] !=0:
                         self.running = False
                         print("Game Over!")
+                        break
 
     def block_move(self):
 
@@ -268,8 +269,7 @@ class game:
                     checking_block = self.block_data[i]
                     col = ((checking_block.x -self.margin_left)//self.grid_size)-1
                     row = ((checking_block.y-self.margin_top)//self.grid_size)
-                    print(i,"th block sees: ",self.grid[row][col])
-                    print(row,col)
+
                     if row <= len(self.grid):
                         if self.grid[row][col] == 2:
                             self.move = False
