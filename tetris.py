@@ -14,8 +14,8 @@ class block:
         self.grid = grid
         self.x = x
         self.y = y +margin_top
-        self.block_type = random.choice(self.block_types)
-
+        # self.block_type = random.choice(self.block_types)
+        self.block_type = "L"
         self.block_shape = self.get_shapes()
 
 
@@ -148,9 +148,9 @@ class block:
 
                 if self.block_shape[self.rotation][i][j] == 1:
                     rect_obj = pygame.Rect(self.x+self.grid_size*j,self.y+self.grid_size*i,self.grid_size,self.grid_size)
-                    print(i)
+
                     self._blocks.append(rect_obj)
-        print(self._blocks)
+
 
     def control_block(self,move):
         if move == "right":
@@ -192,6 +192,7 @@ class game:
         self.pieces = []
         self.collision_blocks = []
         self.start_time = 0
+        self.expensive_checking_piece = ["Z","S"]
 
     def draw_grid(self):
         for i ,col in enumerate(self.grid):
@@ -244,9 +245,12 @@ class game:
                     print("Game Over!")
 
     def block_move(self):
+
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
             last_block = self.block_data[-1]
+            print("new block data collected")
+
 
             # checking if the last block has reached the bottom or not
             if last_block.y//self.grid_size<=(self.num_grid_rows-1) :
@@ -256,15 +260,19 @@ class game:
                     if (rect_obj.y//self.grid_size) -1< len(self.grid):
                         if last_block.y//self.grid_size<len(self.grid):
                             # row beneath the last block of the active/falling piece
-                            if (last_block.x//self.grid_size)-(self.init_block.block_width+1) <0:
-                                first_index = 0
+                            if (last_block.x//self.grid_size)-(self.init_block.block_width+1) <=0:
+                                first_index = (last_block.x // self.grid_size) - self.init_block.block_width
                                 last_index = self.init_block.block_width+1
+
+                            else:
+                                first_index = (last_block.x//self.grid_size)
+                                last_index = (last_block.x//self.grid_size)-(self.init_block.block_width)+1
+
+                            if last_index>first_index:
                                 iterator = 1
                             else:
-                                first_index = (last_block.x//self.grid_size-1)
-                                last_index = (last_block.x//self.grid_size)-(self.init_block.block_width+1)
                                 iterator = -1
-                            print(np.flip(self.grid[(last_block.y//self.grid_size)][last_block.x//self.grid_size-1:(last_block.x//self.grid_size)-(self.init_block.block_width+1):-1]))
+                            print(np.flip(self.grid[(last_block.y//self.grid_size)][first_index:last_index-1:iterator]))
                             print(first_index,last_index)
                             # checking if the row beneath has a block already placed or not
                             if 2 not in self.grid[(last_block.y//self.grid_size)][first_index:last_index:iterator]:
@@ -272,7 +280,9 @@ class game:
                                 self.grid[(rect_obj.y//self.grid_size)-1][(rect_obj.x//self.grid_size)-1] = 0
                                 # move the blocks down
                                 rect_obj.y+=self.grid_size
+                                # print("no collision detected",self.grid[(last_block.y//self.grid_size)][first_index:last_index:iterator])
                             else:
+                                print("block beneath")
                                 self.init_block = None
                                 break
                         else:
