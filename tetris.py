@@ -153,30 +153,66 @@ class block:
     def create_block_list(self):
         self._blocks = []
         for i in range(len(self.block_shape[self.rotation])):
-
             for j in range(len(self.block_shape[self.rotation][i])):
-
                 if self.block_shape[self.rotation][i][j] == 1:
                     rect_obj = pygame.Rect(self.x+self.grid_size*j,self.y+self.grid_size*i,self.grid_size,self.grid_size)
-
                     self._blocks.append(rect_obj)
 
 
     def control_block(self,move):
         if move == "right":
-            if ((self.x-self.margin_left) // self.grid_size)<=len(self.grid[0]) and ((self._blocks[0].x-self.margin_left)+(self.block_width*self.grid_size))//self.grid_size<11:
-                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)] == 0:
-                    for rect_obj in self._blocks:
-                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
-                        rect_obj.x+=self.grid_size
+            # ik this is something not optimal but it works and i might optimize it later
+            # because my main goal is to train the ai on the game
+            # which really doesnt care about the visuals but the backend i.e the grid and everything
+            self.movable_right = True
+            for rect_obj in self._blocks:
+                if ((rect_obj.x-self.margin_left)//self.grid_size)>0 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
+                    if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
+                        self.movable_right = False
+                    else:
+                        self.movable_right = True
+                else:
+                    self.movable_right = False
+            if self.movable_right:
+                for rect_obj in self._blocks:
+                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                    rect_obj.x+=self.grid_size
 
         if move == "left":
-            if ((self.x -self.margin_left)// self.grid_size)>0  and (self._blocks[0].x-self.margin_left)//self.grid_size>1:
-                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)-1] == 0:
-                    for rect_obj in self._blocks:
-                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+            self.movable_left = True
+            for rect_obj in self._blocks:
+                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
+                    if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
+                        self.movable_left = False
+                    else:
+                        self.movable_left = True
+                else:
+                    self.movable_left = False
+                    break
+            if self.movable_left:
+                for rect_obj in self._blocks:
+                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
 
-                        rect_obj.x-=self.grid_size
+                    rect_obj.x-=self.grid_size
+
+
+
+    def rotate_block(self):
+        #clamp the rotation to length of the block shape
+
+        if self.rotation < len(self.block_shape)-1:
+            self.rotation+=1
+        else:
+            self.rotation = 0
+        self.y = self._blocks[0].y
+        self.x = self._blocks[0].x
+        self.create_block_list()
+#         checking if the rotation is valid or not
+        for rect_obj in self._blocks:
+            if ((rect_obj.x-self.margin_left)//self.grid_size)>0 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
+                if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
+                    self.rotation-=1
+
 
 class game:
     def __init__(self):
@@ -278,6 +314,7 @@ class game:
                     for rect_obj in self.block_data:
                         self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
                         rect_obj.y+=self.grid_size
+
                 else:
                     self.init_block = None
 
@@ -308,6 +345,15 @@ class game:
                     if event.key == pygame.K_LEFT:
                         if self.init_block is not None:
                             self.init_block.control_block("left")
+
+                    if event.key == pygame.K_UP:
+                        if self.init_block is not None:
+
+                            for rect_obj in self.init_block._blocks:
+                                print("resetting block intial grid position")
+                                self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
+                        self.init_block.rotate_block()
+
 
             self.screen.fill("black")
             self.update_grid()
