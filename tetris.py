@@ -166,7 +166,7 @@ class block:
             # which really doesnt care about the visuals but the backend i.e the grid and everything
             self.movable_right = True
             for rect_obj in self._blocks:
-                if ((rect_obj.x-self.margin_left)//self.grid_size)>0 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
+                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left)//self.grid_size) <len(self.grid[0]):
                     if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
                         self.movable_right = False
                     else:
@@ -207,11 +207,7 @@ class block:
         self.y = self._blocks[0].y
         self.x = self._blocks[0].x
         self.create_block_list()
-#         checking if the rotation is valid or not
-        for rect_obj in self._blocks:
-            if ((rect_obj.x-self.margin_left)//self.grid_size)>0 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
-                if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
-                    self.rotation-=1
+
 
 
 class game:
