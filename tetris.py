@@ -14,8 +14,9 @@ class block:
         self.rotation = 0
         self.grid = grid
         self.x = x
-        self.block_type = random.choice(self.block_types)
+        # self.block_type = random.choice(self.block_types)
 
+        self.block_type = "O"
         self.block_indices = []
         self.block_shape = self.get_shapes()
         self.y = y +margin_top+(self.block_height*self.grid_size)
@@ -166,7 +167,7 @@ class block:
             # which really doesnt care about the visuals but the backend i.e the grid and everything
             self.movable_right = True
             for rect_obj in self._blocks:
-                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left)//self.grid_size) <len(self.grid[0]):
+                if ((rect_obj.x-self.margin_left)//self.grid_size) < len(self.grid[0]):
                     if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
                         self.movable_right = False
                     else:
@@ -181,7 +182,7 @@ class block:
         if move == "left":
             self.movable_left = True
             for rect_obj in self._blocks:
-                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left) // self.grid_size)<len(self.grid[0]):
+                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left)//self.grid_size) < len(self.grid[0]):
                     if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
                         self.movable_left = False
                     else:
@@ -248,14 +249,20 @@ class game:
 
 
     def check_rows(self):
-        for i in range(len(self.grid)-1,-1,-1):
-            row = self.grid[i]
-            if 0 not in row and 1 not in row:
-                self.grid = np.delete(self.grid,i,0)
-                self.grid = np.insert(self.grid,[0]*len(self.grid),0,axis=0)
-                self.score += 10
-                print(f"score: {self.score}")
-                break
+        # 1. Create a mask of rows that are NOT completely full
+        # .all(axis=1) returns True if the whole row is non-zero
+        # Keep rows that are NOT full of the value 2
+        non_full_rows = self.grid[~((self.grid == 2).all(axis=1))]
+
+        # 2. Calculate how many rows were cleared
+        rows_cleared = self.grid.shape[0] - non_full_rows.shape[0]
+
+        # 3. Add that many zero-rows to the top
+        if rows_cleared > 0:
+            new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
+            self.grid = np.vstack((new_rows, non_full_rows))
+
+        self.score+=100*rows_cleared
         pygame.display.set_caption(
             f"Tetris | Score: {self.score}"
         )
@@ -352,12 +359,12 @@ class game:
 
 
             self.screen.fill("black")
-            self.update_grid()
-            self.draw_grid()
-            if self.start_time + 250 < pygame.time.get_ticks():
+            if self.start_time + 190 < pygame.time.get_ticks():
                 self.start_time = pygame.time.get_ticks()
                 self.block_move()
 
+            self.update_grid()
+            self.draw_grid()
             pygame.display.update()
             self.check_rows()
             self.clock.tick(self.FPS)
