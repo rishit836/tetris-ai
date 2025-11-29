@@ -14,10 +14,12 @@ class block:
         self.rotation = 0
         self.grid = grid
         self.x = x
-        # self.block_type = random.choice(self.block_types)
+        self.block_type = random.choice(self.block_types)
 
-        self.block_type = "O"
+        # self.block_type = "O"
         self.block_indices = []
+        self.left_most_blocks = []
+        self.right_most_blocks = []
         self.block_shape = self.get_shapes()
         self.y = y +margin_top+(self.block_height*self.grid_size)
         # hard coding the blocks to check beneath
@@ -31,6 +33,8 @@ class block:
             if self.rotation==0:
                 self.block_width=4
                 self.block_indices = [0,1,2,3]
+            self.right_most_blocks = [3,0]
+            self.left_most_blocks = [0,0]
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -47,6 +51,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 3
                 self.block_indices = [1,2,3]
+            self.right_most_blocks = [3,1,2,0]
+            self.left_most_blocks = [1,0,0,3]
             return [
                 [
                     [1,0,0],
@@ -73,6 +79,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 2
                 self.block_indices = [2,3]
+            self.right_most_blocks = [3,2,1,0]
+            self.left_most_blocks = [0,0,0,1]
             return [
                 [
                     [0,1,0],
@@ -99,6 +107,8 @@ class block:
             self.block_height=1
             self.block_width=2
             self.block_indices = [2,3]
+            self.right_most_blocks = [2]
+            self.left_most_blocks = [2]
             return [
                 [
                     [1,1],
@@ -110,6 +120,8 @@ class block:
             if self.rotation==0:
                 self.block_width=2
                 self.block_indices = [3,4]
+            self.right_most_blocks = [1,3]
+            self.left_most_blocks = [3,0]
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -123,6 +135,8 @@ class block:
             if self.rotation==0:
                 self.block_width=2
                 self.block_indices = [0,3,4]
+            self.right_most_blocks = [4,0]
+            self.left_most_blocks = [0,1]
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -136,6 +150,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 3
                 self.block_indices = [1,2,3]
+            self.right_most_blocks = [3,2,2,0]
+            self.left_most_blocks = [1,0,0,1]
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -162,45 +178,42 @@ class block:
 
     def control_block(self,move):
         if move == "right":
-            # ik this is something not optimal but it works and i might optimize it later
-            # because my main goal is to train the ai on the game
-            # which really doesnt care about the visuals but the backend i.e the grid and everything
+            check_block = self._blocks[self.right_most_blocks[self.rotation]]
             self.movable_right = True
-            for rect_obj in self._blocks:
-                if ((rect_obj.x-self.margin_left)//self.grid_size) < len(self.grid[0]):
-                    if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
-                        self.movable_right = False
-                    else:
-                        self.movable_right = True
+            if ((check_block.x-self.margin_left)//self.grid_size)<len(self.grid[0]):
+                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)] == 0:
+                    self.movable_right = True
                 else:
                     self.movable_right = False
+            else:
+                self.movable_right = False
+
             if self.movable_right:
                 for rect_obj in self._blocks:
-                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
                     rect_obj.x+=self.grid_size
+
 
         if move == "left":
             self.movable_left = True
-            for rect_obj in self._blocks:
-                if ((rect_obj.x-self.margin_left)//self.grid_size)>1 and ((rect_obj.x-self.margin_left)//self.grid_size) < len(self.grid[0]):
-                    if not self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)] == 0:
-                        self.movable_left = False
-                    else:
-                        self.movable_left = True
+            check_block = self._blocks[self.left_most_blocks[self.rotation]]
+            if ((check_block.x-self.margin_left)//self.grid_size)-2>=0:
+                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)-2] == 0:
+                    self.movable_left = True
                 else:
                     self.movable_left = False
-                    break
+            else:
+                self.movable_left = False
+
             if self.movable_left:
                 for rect_obj in self._blocks:
                     self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
-
                     rect_obj.x-=self.grid_size
 
 
 
     def rotate_block(self):
         #clamp the rotation to length of the block shape
-
         if self.rotation < len(self.block_shape)-1:
             self.rotation+=1
         else:
