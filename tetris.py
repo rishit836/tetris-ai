@@ -214,6 +214,16 @@ class block:
 
     def rotate_block(self):
         #clamp the rotation to length of the block shape
+        # checking for corner cases:
+        # right corner:
+        right_block = self._blocks[self.right_most_blocks[self.rotation]]
+        if (right_block.x -self.margin_left)//self.grid_size == len(self.grid[0]):
+            return False
+        # left corner:
+        left_block = self._blocks[self.left_most_blocks[self.rotation]]
+        if (left_block.x -self.margin_left)//self.grid_size == 0:
+            return False
+
         if self.rotation < len(self.block_shape)-1:
             self.rotation+=1
         else:
@@ -221,6 +231,7 @@ class block:
         self.y = self._blocks[0].y
         self.x = self._blocks[0].x
         self.create_block_list()
+        return True
 
 
 
@@ -263,15 +274,8 @@ class game:
 
 
     def check_rows(self):
-        # 1. Create a mask of rows that are NOT completely full
-        # .all(axis=1) returns True if the whole row is non-zero
-        # Keep rows that are NOT full of the value 2
         non_full_rows = self.grid[~((self.grid == 2).all(axis=1))]
-
-        # 2. Calculate how many rows were cleared
         rows_cleared = self.grid.shape[0] - non_full_rows.shape[0]
-
-        # 3. Add that many zero-rows to the top
         if rows_cleared > 0:
             new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
             self.grid = np.vstack((new_rows, non_full_rows))
@@ -385,6 +389,7 @@ class game:
                     if event.key == pygame.K_UP:
                         if self.init_block is not None:
                             self.grid[self.grid == 1] = 0
+
                         self.init_block.rotate_block()
                         self.update_grid()
 

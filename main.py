@@ -275,13 +275,16 @@ class Game:
     def visual_run(self):
         print("mode:visual")
         spawner = block_spawner(self.grid_size,["I","J","L","O","S","Z","T"],self.screen,self.grid)
+        start = pygame.time.get_ticks()
         while self.running:
             for event in pygame.event.get():
                 if event.type==pygame.QUIT:
                     self.running=False
                     sys.exit()
-            self.screen.fill("black")
-            spawner.update_block()
+            if pygame.time.get_ticks()-start >= 250:
+                self.screen.fill("black")
+                spawner.update_block()
+                start = pygame.time.get_ticks()
 
 
 
@@ -289,7 +292,7 @@ class Game:
             # pygame.time.delay(300)
 
 
-            self.draw_grid()
+                self.draw_grid()
             pygame.display.flip()
             self.clock.tick(self.FPS)
 
