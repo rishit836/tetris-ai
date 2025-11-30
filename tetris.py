@@ -16,7 +16,6 @@ class block:
         self.x = x
         self.block_type = random.choice(self.block_types)
 
-        # self.block_type = "O"
         self.block_indices = []
         self.left_most_blocks = []
         self.right_most_blocks = []
@@ -107,8 +106,8 @@ class block:
             self.block_height=1
             self.block_width=2
             self.block_indices = [2,3]
-            self.right_most_blocks = [2]
-            self.left_most_blocks = [2]
+            self.right_most_blocks = [3]
+            self.left_most_blocks = [3]
             return [
                 [
                     [1,1],
@@ -181,7 +180,7 @@ class block:
             check_block = self._blocks[self.right_most_blocks[self.rotation]]
             self.movable_right = True
             if ((check_block.x-self.margin_left)//self.grid_size)<len(self.grid[0]):
-                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)] == 0:
+                if self.grid[((check_block.y-self.margin_top)//self.grid_size)-1][((check_block.x-self.margin_left)//self.grid_size)] == 0:
                     self.movable_right = True
                 else:
                     self.movable_right = False
