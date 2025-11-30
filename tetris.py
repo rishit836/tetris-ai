@@ -213,6 +213,7 @@ class block:
 
 
     def rotate_block(self):
+        self.prev_rotation = self.rotation
         #clamp the rotation to length of the block shape
         # checking for corner cases:
         # right corner:
@@ -230,7 +231,34 @@ class block:
             self.rotation = 0
         self.y = self._blocks[0].y
         self.x = self._blocks[0].x
+        self.prev_y = self.y
+        self.prev_x = self.x
         self.create_block_list()
+
+        # checking if the rotation is valid or not
+        for rect_obj in self._blocks:
+            block_row = ((rect_obj.y-self.margin_top)//self.grid_size)-1
+            block_col = ((rect_obj.x-self.margin_left)//self.grid_size)-1
+            print(block_row, block_col)
+            if (block_row < 0 or block_col < 0 ) or (block_row >= len(self.grid) or block_col >= len(self.grid[0])):
+                self.rotation = self.prev_rotation
+
+                self.x = self.prev_x
+                self.y = self.prev_y
+                self.create_block_list()
+                print("out of bounds")
+                return False
+            if not self.grid[block_row][block_col] == 0:
+                self.rotation = self.prev_rotation
+                self.x = self.prev_x
+                self.y = self.prev_y
+                self.create_block_list()
+                print("collision")
+                return False
+
+
+
+
         return True
 
 
@@ -390,7 +418,11 @@ class game:
                         if self.init_block is not None:
                             self.grid[self.grid == 1] = 0
 
-                        self.init_block.rotate_block()
+                        rotation_done = self.init_block.rotate_block()
+                        if rotation_done:
+                            print("block rotated")
+                        else:
+                            print("Block cant be rotated")
                         self.update_grid()
 
 
