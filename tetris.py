@@ -190,7 +190,7 @@ class block:
 
             if self.movable_right:
                 for rect_obj in self._blocks:
-                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
+                    self.grid[self.grid == 1] = 0
                     rect_obj.x+=self.grid_size
 
 
@@ -207,7 +207,7 @@ class block:
 
             if self.movable_left:
                 for rect_obj in self._blocks:
-                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+                    self.grid[self.grid == 1] = 0
                     rect_obj.x-=self.grid_size
 
 
@@ -236,6 +236,7 @@ class game:
         self.margin_bottom = 10
         self.side_panel_width = 250
         self.grid_size = 40
+        self.speed = 200
 
         self.HEIGHT = (self.grid_size * self.num_grid_rows) + self.margin_top + self.margin_bottom
         self.WIDTH = (self.grid_size * self.num_grid_cols) + self.margin_left + self.side_panel_width
@@ -274,11 +275,12 @@ class game:
         if rows_cleared > 0:
             new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
             self.grid = np.vstack((new_rows, non_full_rows))
-
-        self.score+=100*rows_cleared
-        pygame.display.set_caption(
-            f"Tetris | Score: {self.score}"
-        )
+            self.speed -= 25
+            self.score+=100*rows_cleared
+            pygame.display.set_caption(
+                f"Tetris | Score: {self.score}"
+            )
+            self.update_grid()
 
 
 
@@ -347,40 +349,54 @@ class game:
         print("mode:visual")
         self.start_time = pygame.time.get_ticks()
         while self.running:
+            self.screen.fill("black")
+            if self.start_time + self.speed < pygame.time.get_ticks():
+                self.start_time = pygame.time.get_ticks()
+
+                self.check_rows()
+                self.block_move()
+            self.update_grid()
+
+
+            self.draw_grid()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_d:
-                        print("the block instance is deleted.")
-                        self.init_block = None
+                        # print("the block instance is deleted.")
+                        # self.init_block = None
+                        self.speed-=25
+                        self.score += 100
+                        self.update_grid()
                     if event.key == pygame.K_RIGHT:
                         if self.init_block is not None:
                             self.init_block.control_block("right")
+                        self.update_grid()
+
                     if event.key == pygame.K_LEFT:
                         if self.init_block is not None:
                             self.init_block.control_block("left")
+                        self.update_grid()
+
 
                     if event.key == pygame.K_UP:
                         if self.init_block is not None:
-
                             for rect_obj in self.init_block._blocks:
-                                print("resetting block intial grid position")
                                 self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
                         self.init_block.rotate_block()
+                        self.update_grid()
 
 
-            self.screen.fill("black")
-            if self.start_time + 190 < pygame.time.get_ticks():
-                self.start_time = pygame.time.get_ticks()
-                self.block_move()
 
-            self.update_grid()
-            self.draw_grid()
+
+
             pygame.display.update()
-            self.check_rows()
             self.clock.tick(self.FPS)
+
+
+
 
 
 if __name__=="__main__":
