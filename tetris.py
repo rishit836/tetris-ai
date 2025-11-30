@@ -16,7 +16,10 @@ class block:
         self.x = x
         self.block_type = random.choice(self.block_types)
 
+        # self.block_type = "O"
         self.block_indices = []
+        self.left_most_blocks = []
+        self.right_most_blocks = []
         self.block_shape = self.get_shapes()
         self.y = y +margin_top+(self.block_height*self.grid_size)
         # hard coding the blocks to check beneath
@@ -30,6 +33,8 @@ class block:
             if self.rotation==0:
                 self.block_width=4
                 self.block_indices = [0,1,2,3]
+            self.right_most_blocks = [3,0]
+            self.left_most_blocks = [0,0]
             return [
                 [[0,0,0,0],
                 [0,0,0,0],
@@ -46,6 +51,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 3
                 self.block_indices = [1,2,3]
+            self.right_most_blocks = [3,1,2,0]
+            self.left_most_blocks = [1,0,0,3]
             return [
                 [
                     [1,0,0],
@@ -72,6 +79,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 2
                 self.block_indices = [2,3]
+            self.right_most_blocks = [3,2,1,0]
+            self.left_most_blocks = [0,0,0,1]
             return [
                 [
                     [0,1,0],
@@ -98,6 +107,8 @@ class block:
             self.block_height=1
             self.block_width=2
             self.block_indices = [2,3]
+            self.right_most_blocks = [2]
+            self.left_most_blocks = [2]
             return [
                 [
                     [1,1],
@@ -109,6 +120,8 @@ class block:
             if self.rotation==0:
                 self.block_width=2
                 self.block_indices = [3,4]
+            self.right_most_blocks = [1,3]
+            self.left_most_blocks = [3,0]
             return [
                 [[0,1,1],
                  [0,1,0],
@@ -122,6 +135,8 @@ class block:
             if self.rotation==0:
                 self.block_width=2
                 self.block_indices = [0,3,4]
+            self.right_most_blocks = [4,0]
+            self.left_most_blocks = [0,1]
             return [
                 [[1,1,0],
                  [0,1,0],
@@ -135,6 +150,8 @@ class block:
             if self.rotation == 0:
                 self.block_width = 3
                 self.block_indices = [1,2,3]
+            self.right_most_blocks = [3,2,2,0]
+            self.left_most_blocks = [1,0,0,1]
             return [
                 [[0, 1, 0],
                  [1, 1, 1],
@@ -153,30 +170,59 @@ class block:
     def create_block_list(self):
         self._blocks = []
         for i in range(len(self.block_shape[self.rotation])):
-
             for j in range(len(self.block_shape[self.rotation][i])):
-
                 if self.block_shape[self.rotation][i][j] == 1:
                     rect_obj = pygame.Rect(self.x+self.grid_size*j,self.y+self.grid_size*i,self.grid_size,self.grid_size)
-
                     self._blocks.append(rect_obj)
 
 
     def control_block(self,move):
         if move == "right":
-            if ((self.x-self.margin_left) // self.grid_size)<=len(self.grid[0]) and ((self._blocks[0].x-self.margin_left)+(self.block_width*self.grid_size))//self.grid_size<11:
-                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)] == 0:
-                    for rect_obj in self._blocks:
-                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
-                        rect_obj.x+=self.grid_size
+            check_block = self._blocks[self.right_most_blocks[self.rotation]]
+            self.movable_right = True
+            if ((check_block.x-self.margin_left)//self.grid_size)<len(self.grid[0]):
+                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)] == 0:
+                    self.movable_right = True
+                else:
+                    self.movable_right = False
+            else:
+                self.movable_right = False
+
+            if self.movable_right:
+                for rect_obj in self._blocks:
+                    self.grid[self.grid == 1] = 0
+                    rect_obj.x+=self.grid_size
+
 
         if move == "left":
-            if ((self.x -self.margin_left)// self.grid_size)>0  and (self._blocks[0].x-self.margin_left)//self.grid_size>1:
-                if self.grid[(self.y//self.grid_size)-1][(self.x//self.grid_size)-1] == 0:
-                    for rect_obj in self._blocks:
-                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0 #fixes the bug where blocks still remain when block is moved while falling
+            self.movable_left = True
+            check_block = self._blocks[self.left_most_blocks[self.rotation]]
+            if ((check_block.x-self.margin_left)//self.grid_size)-2>=0:
+                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)-2] == 0:
+                    self.movable_left = True
+                else:
+                    self.movable_left = False
+            else:
+                self.movable_left = False
 
-                        rect_obj.x-=self.grid_size
+            if self.movable_left:
+                for rect_obj in self._blocks:
+                    self.grid[self.grid == 1] = 0
+                    rect_obj.x-=self.grid_size
+
+
+
+    def rotate_block(self):
+        #clamp the rotation to length of the block shape
+        if self.rotation < len(self.block_shape)-1:
+            self.rotation+=1
+        else:
+            self.rotation = 0
+        self.y = self._blocks[0].y
+        self.x = self._blocks[0].x
+        self.create_block_list()
+
+
 
 class game:
     def __init__(self):
@@ -190,6 +236,7 @@ class game:
         self.margin_bottom = 10
         self.side_panel_width = 250
         self.grid_size = 40
+        self.speed = 200
 
         self.HEIGHT = (self.grid_size * self.num_grid_rows) + self.margin_top + self.margin_bottom
         self.WIDTH = (self.grid_size * self.num_grid_cols) + self.margin_left + self.side_panel_width
@@ -216,17 +263,24 @@ class game:
 
 
     def check_rows(self):
-        for i in range(len(self.grid)-1,-1,-1):
-            row = self.grid[i]
-            if 0 not in row and 1 not in row:
-                self.grid = np.delete(self.grid,i,0)
-                self.grid = np.insert(self.grid,[0]*len(self.grid),0,axis=0)
-                self.score += 10
-                print(f"score: {self.score}")
-                break
-        pygame.display.set_caption(
-            f"Tetris | Score: {self.score}"
-        )
+        # 1. Create a mask of rows that are NOT completely full
+        # .all(axis=1) returns True if the whole row is non-zero
+        # Keep rows that are NOT full of the value 2
+        non_full_rows = self.grid[~((self.grid == 2).all(axis=1))]
+
+        # 2. Calculate how many rows were cleared
+        rows_cleared = self.grid.shape[0] - non_full_rows.shape[0]
+
+        # 3. Add that many zero-rows to the top
+        if rows_cleared > 0:
+            new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
+            self.grid = np.vstack((new_rows, non_full_rows))
+            self.speed -= 25
+            self.score+=100*rows_cleared
+            pygame.display.set_caption(
+                f"Tetris | Score: {self.score}"
+            )
+            self.update_grid()
 
 
 
@@ -234,6 +288,7 @@ class game:
         # block spawner
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
+            self.grid[self.grid==1]=0
 
             for rect_obj in self.init_block._blocks:
                 if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
@@ -278,6 +333,7 @@ class game:
                     for rect_obj in self.block_data:
                         self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
                         rect_obj.y+=self.grid_size
+
                 else:
                     self.init_block = None
 
@@ -294,31 +350,53 @@ class game:
         print("mode:visual")
         self.start_time = pygame.time.get_ticks()
         while self.running:
+            self.screen.fill("black")
+            if self.start_time + self.speed < pygame.time.get_ticks():
+                self.start_time = pygame.time.get_ticks()
+
+                self.check_rows()
+                self.block_move()
+            self.update_grid()
+
+
+            self.draw_grid()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_d:
-                        print("the block instance is deleted.")
-                        self.init_block = None
+                        # print("the block instance is deleted.")
+                        # self.init_block = None
+                        self.speed-=25
+                        self.score += 100
+                        self.update_grid()
                     if event.key == pygame.K_RIGHT:
                         if self.init_block is not None:
                             self.init_block.control_block("right")
+                        self.update_grid()
+
                     if event.key == pygame.K_LEFT:
                         if self.init_block is not None:
                             self.init_block.control_block("left")
+                        self.update_grid()
 
-            self.screen.fill("black")
-            self.update_grid()
-            self.draw_grid()
-            if self.start_time + 250 < pygame.time.get_ticks():
-                self.start_time = pygame.time.get_ticks()
-                self.block_move()
+
+                    if event.key == pygame.K_UP:
+                        if self.init_block is not None:
+                            self.grid[self.grid == 1] = 0
+                        self.init_block.rotate_block()
+                        self.update_grid()
+
+
+
+
 
             pygame.display.update()
-            self.check_rows()
             self.clock.tick(self.FPS)
+
+
+
 
 
 if __name__=="__main__":
