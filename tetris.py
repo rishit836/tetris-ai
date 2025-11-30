@@ -288,6 +288,7 @@ class game:
         # block spawner
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
+            self.grid[self.grid==1]=0
 
             for rect_obj in self.init_block._blocks:
                 if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
@@ -383,8 +384,7 @@ class game:
 
                     if event.key == pygame.K_UP:
                         if self.init_block is not None:
-                            for rect_obj in self.init_block._blocks:
-                                self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
+                            self.grid[self.grid == 1] = 0
                         self.init_block.rotate_block()
                         self.update_grid()
 
