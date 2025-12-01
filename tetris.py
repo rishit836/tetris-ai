@@ -5,7 +5,7 @@ import pygame
 
 class block:
     block_types = ["I","J","L","O","S","Z","T"]
-    def __init__(self,x,y,screen,grid_size,grid,margin_top):
+    def __init__(self,x,y,screen,grid_size,grid,margin_top,block_type=None):
 
         self.screen=screen
         self.grid_size = grid_size
@@ -14,13 +14,19 @@ class block:
         self.rotation = 0
         self.grid = grid
         self.x = x
-        self.block_type = random.choice(self.block_types)
-
+        if block_type is None:
+            self.block_type = random.choice(self.block_types)
+        else:
+            self.block_type = block_type
         self.block_indices = []
         self.left_most_blocks = []
         self.right_most_blocks = []
         self.block_shape = self.get_shapes()
         self.y = y +margin_top+(self.block_height*self.grid_size)
+
+        self.num_grid_cols = 10
+        self.num_grid_rows = 20
+        self.computed = False
         # hard coding the blocks to check beneath
 
 
@@ -238,25 +244,22 @@ class block:
         for rect_obj in self._blocks:
             block_row = ((rect_obj.y-self.margin_top)//self.grid_size)-1
             block_col = ((rect_obj.x-self.margin_left)//self.grid_size)-1
-            print(block_row, block_col)
+
             if (block_row < 0 or block_col < 0 ) or (block_row >= len(self.grid) or block_col >= len(self.grid[0])):
                 self.rotation = self.prev_rotation
 
                 self.x = self.prev_x
                 self.y = self.prev_y
                 self.create_block_list()
-                print("out of bounds")
+
                 return False
             if not self.grid[block_row][block_col] == 0:
                 self.rotation = self.prev_rotation
                 self.x = self.prev_x
                 self.y = self.prev_y
                 self.create_block_list()
-                print("collision")
+
                 return False
-
-
-
 
         return True
 
@@ -313,8 +316,6 @@ class game:
             )
             self.update_grid()
 
-
-
     def update_grid(self):
         # block spawner
         if self.init_block is not None:
@@ -342,7 +343,6 @@ class game:
                         break
 
     def block_move(self):
-
         if self.init_block is not None:
             self.block_data = self.init_block._blocks
             last_block = self.block_data[-1]
@@ -367,9 +367,6 @@ class game:
 
                 else:
                     self.init_block = None
-
-
-
             else:
                 self.init_block = None
 
@@ -381,24 +378,12 @@ class game:
         print("mode:visual")
         self.start_time = pygame.time.get_ticks()
         while self.running:
-            self.screen.fill("black")
-            if self.start_time + self.speed < pygame.time.get_ticks():
-                self.start_time = pygame.time.get_ticks()
-
-                self.check_rows()
-                self.block_move()
-            self.update_grid()
-
-
-            self.draw_grid()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_d:
-                        # print("the block instance is deleted.")
-                        # self.init_block = None
                         self.speed-=25
                         self.score += 100
                         self.update_grid()
@@ -425,11 +410,19 @@ class game:
                         self.update_grid()
 
 
-
-
+            self.screen.fill("black")
+            if self.start_time + self.speed < pygame.time.get_ticks():
+                self.start_time = pygame.time.get_ticks()
+                self.check_rows()
+                self.block_move()
+            self.update_grid()
+            self.draw_grid()
 
             pygame.display.update()
             self.clock.tick(self.FPS)
+
+
+
 
 
 
