@@ -30,6 +30,7 @@ class block:
         self.num_grid_rows = 20
         self.computed = False
         self.create_block_list()
+        self.ghost_rects = []
 
     def get_shapes(self):
         if self.block_type=="I":
@@ -112,7 +113,7 @@ class block:
             self.block_width=2
             self.block_indices = [[2,3]]
             self.right_most_blocks = [3]
-            self.left_most_blocks = [3]
+            self.left_most_blocks = [2]
             return [
                 [
                     [1,1],
@@ -229,7 +230,7 @@ class block:
         if (left_block.x -self.margin_left)//self.grid_size == 0:
             return False
 
-        if self.rotation < len(self.block_shape)-1:
+        if self.rotation+1 < len(self.block_indices):
             self.rotation+=1
         else:
             self.rotation = 0
@@ -273,8 +274,6 @@ class block:
                 check_block_x = (((check_block.x - self.margin_left))//self.grid_size) - 1
                 check_block_y = (((check_block.y-self.margin_top))//self.grid_size)+(offset+1)
 
-                print(offset)
-
                 if check_block_y >= self.num_grid_rows:
                     collision = True
                     break
@@ -286,7 +285,6 @@ class block:
             if collision:
                 print("calculated the ghost piece")
                 break
-
             offset+= 1
         ghost_rects = []
         for rect in self._blocks:
@@ -336,7 +334,9 @@ class game:
 
 
         if self.init_block is not None:
-            ghost_rects = self.init_block.ghost_piece()
+            # calculating the ghost piece position only once
+            if self.init_block.ghost_rects == []:
+                ghost_rects = self.init_block.ghost_piece()
 
             for rect in ghost_rects:
                 pygame.draw.rect(self.screen,(128,128,128),rect,width=2)
@@ -361,29 +361,32 @@ class game:
 
     def update_grid(self):
         # block spawner
-        if self.init_block is not None:
-            self.block_data = self.init_block._blocks
-            self.grid[self.grid==1]=0
+        try:
+            if self.init_block is not None:
+                self.block_data = self.init_block._blocks
+                self.grid[self.grid==1]=0
 
-            for rect_obj in self.init_block._blocks:
-                if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
-                    if ((rect_obj.y - self.margin_top) // self.grid_size) - 1 < len(self.grid) and ((rect_obj.x - self.margin_left) // self.grid_size) - 1 <= len(self.grid[0]):
-                        self.grid[((rect_obj.y - self.margin_top) // self.grid_size) - 1][
-                            ((rect_obj.x - self.margin_left) // self.grid_size) - 1] = 1
+                for rect_obj in self.init_block._blocks:
+                    if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
+                        if ((rect_obj.y - self.margin_top) // self.grid_size) - 1 < len(self.grid) and ((rect_obj.x - self.margin_left) // self.grid_size) - 1 <= len(self.grid[0]):
+                            self.grid[((rect_obj.y - self.margin_top) // self.grid_size) - 1][
+                                ((rect_obj.x - self.margin_left) // self.grid_size) - 1] = 1
 
-        else:
-            for rect_obj in self.block_data:
-                self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 2
+            else:
+                for rect_obj in self.block_data:
+                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 2
 
-            # game over logic
-            self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
+                # game over logic
+                self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
 
-            for rect_obj in self.init_block._blocks:
-                if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
-                    if self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] !=0:
-                        self.running = False
-                        print("Game Over!")
-                        break
+                for rect_obj in self.init_block._blocks:
+                    if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
+                        if self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] !=0:
+                            self.running = False
+                            print("Game Over!")
+                            break
+        except Exception as e:
+            print("error,",e)
 
     def block_move(self):
         if self.init_block is not None:
