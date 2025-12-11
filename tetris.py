@@ -14,10 +14,12 @@ class block:
         self.rotation = 0
         self.grid = grid
         self.x = x
+
         if block_type is None:
             self.block_type = random.choice(self.block_types)
         else:
             self.block_type = block_type
+
         self.block_indices = []
         self.left_most_blocks = []
         self.right_most_blocks = []
@@ -27,9 +29,6 @@ class block:
         self.num_grid_cols = 10
         self.num_grid_rows = 20
         self.computed = False
-        # hard coding the blocks to check beneath
-
-
         self.create_block_list()
 
     def get_shapes(self):
@@ -37,7 +36,7 @@ class block:
             self.block_height=0
             if self.rotation==0:
                 self.block_width=4
-                self.block_indices = [0,1,2,3]
+                self.block_indices = [[0,1,2,3],[3]]
             self.right_most_blocks = [3,0]
             self.left_most_blocks = [0,0]
             return [
@@ -55,7 +54,7 @@ class block:
             self.block_height=2
             if self.rotation == 0:
                 self.block_width = 3
-                self.block_indices = [1,2,3]
+                self.block_indices = [[1,2,3],[1,3],[0,1,3]]
             self.right_most_blocks = [3,1,2,0]
             self.left_most_blocks = [1,0,0,3]
             return [
@@ -83,7 +82,7 @@ class block:
             self.block_height=3
             if self.rotation == 0:
                 self.block_width = 2
-                self.block_indices = [2,3]
+                self.block_indices = [[2,3],[1,2,3],[0,3],[1,2,3]]
             self.right_most_blocks = [3,2,1,0]
             self.left_most_blocks = [0,0,0,1]
             return [
@@ -111,7 +110,7 @@ class block:
         elif self.block_type=="O":
             self.block_height=1
             self.block_width=2
-            self.block_indices = [2,3]
+            self.block_indices = [[2,3]]
             self.right_most_blocks = [3]
             self.left_most_blocks = [3]
             return [
@@ -124,7 +123,7 @@ class block:
             self.block_height=3
             if self.rotation==0:
                 self.block_width=2
-                self.block_indices = [3,4]
+                self.block_indices = [[3,4],[1,2,4]]
             self.right_most_blocks = [1,3]
             self.left_most_blocks = [3,0]
             return [
@@ -139,7 +138,7 @@ class block:
             self.block_height=3
             if self.rotation==0:
                 self.block_width=2
-                self.block_indices = [0,3,4]
+                self.block_indices = [[0,3,4],[2,3,4]]
             self.right_most_blocks = [4,0]
             self.left_most_blocks = [0,1]
             return [
@@ -154,7 +153,7 @@ class block:
             self.block_height=2
             if self.rotation == 0:
                 self.block_width = 3
-                self.block_indices = [1,2,3]
+                self.block_indices = [[1,2,3],[2,3],[0,2,3],[1,3]]
             self.right_most_blocks = [3,2,2,0]
             self.left_most_blocks = [1,0,0,1]
             return [
@@ -264,6 +263,39 @@ class block:
         return True
 
 
+    def ghost_piece(self):
+        offset = 0
+        while True:
+            collision = False
+            for idx in self.block_indices[self.rotation]:
+                check_block = self._blocks[idx]
+
+                check_block_x = (((check_block.x - self.margin_left))//self.grid_size) - 1
+                check_block_y = (((check_block.y-self.margin_top))//self.grid_size)+(offset+1)
+
+                print(offset)
+
+                if check_block_y >= self.num_grid_rows:
+                    collision = True
+                    break
+                if check_block_y >=0:
+                    if self.grid[check_block_y][check_block_x] == 2:
+                        collision = True
+                        break
+
+            if collision:
+                print("calculated the ghost piece")
+                break
+
+            offset+= 1
+        ghost_rects = []
+        for rect in self._blocks:
+            ghost_rect = rect.copy()
+            ghost_rect.y += (offset*self.grid_size)
+            ghost_rect.x -= self.grid_size
+            ghost_rects.append(ghost_rect)
+        return ghost_rects
+
 
 class game:
     def __init__(self):
@@ -277,7 +309,7 @@ class game:
         self.margin_bottom = 10
         self.side_panel_width = 250
         self.grid_size = 40
-        self.speed = 200
+        self.speed = 350
 
         self.HEIGHT = (self.grid_size * self.num_grid_rows) + self.margin_top + self.margin_bottom
         self.WIDTH = (self.grid_size * self.num_grid_cols) + self.margin_left + self.side_panel_width
@@ -299,8 +331,16 @@ class game:
                     pygame.draw.rect(self.screen, "white", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
                 elif cell == 1:
                     pygame.draw.rect(self.screen, "red", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-                else:
+                elif cell == 2:
                     pygame.draw.rect(self.screen, "green", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
+
+
+        if self.init_block is not None:
+            ghost_rects = self.init_block.ghost_piece()
+
+            for rect in ghost_rects:
+                pygame.draw.rect(self.screen,(128,128,128),rect,width=2)
+
 
 
     def check_rows(self):
@@ -310,6 +350,9 @@ class game:
             new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
             self.grid = np.vstack((new_rows, non_full_rows))
             self.speed -= 25
+            if not self.speed >0:
+                self.speed = 0
+
             self.score+=100*rows_cleared
             pygame.display.set_caption(
                 f"Tetris | Score: {self.score}"
@@ -350,7 +393,7 @@ class game:
             if (last_block.y-self.margin_top)//self.grid_size<=(self.num_grid_rows)-1 :
                 # if the block hasnt reached the bottom we check what's beneath the last piece of the block
                 self.move = True
-                for i in self.init_block.block_indices:
+                for i in self.init_block.block_indices[self.init_block.rotation]:
 
                     checking_block = self.block_data[i]
                     col = ((checking_block.x -self.margin_left)//self.grid_size)-1
@@ -369,7 +412,6 @@ class game:
                     self.init_block = None
             else:
                 self.init_block = None
-
         else:
             self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
 
@@ -409,22 +451,24 @@ class game:
                             print("Block cant be rotated")
                         self.update_grid()
 
+                    if event.key == pygame.K_DOWN:
+                        if self.init_block !=  None:
+                            self.block_move()
+
+
+
 
             self.screen.fill("black")
             if self.start_time + self.speed < pygame.time.get_ticks():
                 self.start_time = pygame.time.get_ticks()
                 self.check_rows()
                 self.block_move()
+
             self.update_grid()
             self.draw_grid()
 
             pygame.display.update()
             self.clock.tick(self.FPS)
-
-
-
-
-
 
 
 
