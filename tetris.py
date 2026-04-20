@@ -1,480 +1,374 @@
-import sys
+from __future__ import annotations
+
 import random
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
-import pygame
 
-class block:
-    block_types = ["I","J","L","O","S","Z","T"]
-    def __init__(self,x,y,screen,grid_size,grid,margin_top,block_type=None):
+Action = Union[int, str]
 
-        self.screen=screen
-        self.grid_size = grid_size
-        self.margin_top = margin_top
-        self.margin_left = 40
-        self.rotation = 0
-        self.grid = grid
-        self.x = x
+# Each tuple in a rotation is (dx, dy) from the piece origin.
+PIECES: Dict[str, List[List[Tuple[int, int]]]] = {
+    "I": [
+        [(0, 1), (1, 1), (2, 1), (3, 1)],
+        [(2, 0), (2, 1), (2, 2), (2, 3)],
+    ],
+    "J": [
+        [(0, 0), (0, 1), (1, 1), (2, 1)],
+        [(1, 0), (2, 0), (1, 1), (1, 2)],
+        [(0, 1), (1, 1), (2, 1), (2, 2)],
+        [(1, 0), (1, 1), (0, 2), (1, 2)],
+    ],
+    "L": [
+        [(2, 0), (0, 1), (1, 1), (2, 1)],
+        [(1, 0), (1, 1), (1, 2), (2, 2)],
+        [(0, 1), (1, 1), (2, 1), (0, 2)],
+        [(0, 0), (1, 0), (1, 1), (1, 2)],
+    ],
+    "O": [
+        [(1, 0), (2, 0), (1, 1), (2, 1)],
+    ],
+    "S": [
+        [(1, 0), (2, 0), (0, 1), (1, 1)],
+        [(1, 0), (1, 1), (2, 1), (2, 2)],
+    ],
+    "Z": [
+        [(0, 0), (1, 0), (1, 1), (2, 1)],
+        [(2, 0), (1, 1), (2, 1), (1, 2)],
+    ],
+    "T": [
+        [(1, 0), (0, 1), (1, 1), (2, 1)],
+        [(1, 0), (1, 1), (2, 1), (1, 2)],
+        [(0, 1), (1, 1), (2, 1), (1, 2)],
+        [(1, 0), (0, 1), (1, 1), (1, 2)],
+    ],
+}
 
-        if block_type is None:
-            self.block_type = random.choice(self.block_types)
-        else:
-            self.block_type = block_type
+ACTIONS: Dict[Union[int, str], int] = {
+    0: 0,
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    5: 5,
+    "noop": 0,
+    "left": 1,
+    "right": 2,
+    "rotate": 3,
+    "soft_drop": 4,
+    "hard_drop": 5,
+}
 
-        self.block_indices = []
-        self.left_most_blocks = []
-        self.right_most_blocks = []
-        self.block_shape = self.get_shapes()
-        self.y = y +margin_top+(self.block_height*self.grid_size)
-
-        self.num_grid_cols = 10
-        self.num_grid_rows = 20
-        self.computed = False
-        self.create_block_list()
-        self.ghost_rects = []
-
-    def get_shapes(self):
-        if self.block_type=="I":
-            self.block_height=0
-            if self.rotation==0:
-                self.block_width=4
-                self.block_indices = [[0,1,2,3],[3]]
-            self.right_most_blocks = [3,0]
-            self.left_most_blocks = [0,0]
-            return [
-                [[0,0,0,0],
-                [0,0,0,0],
-                [1,1,1,1],
-                [0,0,0,0]],
-
-                [[0,0,1,0],
-                 [0,0,1,0],
-                 [0,0,1,0],
-                 [0,0,1,0]]
-            ]
-        if self.block_type=="J":
-            self.block_height=2
-            if self.rotation == 0:
-                self.block_width = 3
-                self.block_indices = [[1,2,3],[1,3],[0,1,3]]
-            self.right_most_blocks = [3,1,2,0]
-            self.left_most_blocks = [1,0,0,3]
-            return [
-                [
-                    [1,0,0],
-                    [1,1,1],
-                    [0,0,0]
-                 ],
-                [
-                    [0, 1, 1],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 1],
-                    [0, 0, 1]
-                ]
-                ,
-                [[0,1,0],
-                 [0,1,0],
-                 [1,1,0]],
-            ]
-        elif self.block_type=="L":
-            self.block_height=3
-            if self.rotation == 0:
-                self.block_width = 2
-                self.block_indices = [[2,3],[1,2,3],[0,3],[1,2,3]]
-            self.right_most_blocks = [3,2,1,0]
-            self.left_most_blocks = [0,0,0,1]
-            return [
-                [
-                    [0,1,0],
-                    [0,1,0],
-                    [0,1,1]
-                ],
-                [
-                    [0,0,0],
-                    [1,1,1],
-                    [1,0,0]
-                ],
-                [
-                    [1, 1, 0],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 1],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ],
-            ]
-        elif self.block_type=="O":
-            self.block_height=1
-            self.block_width=2
-            self.block_indices = [[2,3]]
-            self.right_most_blocks = [3]
-            self.left_most_blocks = [2]
-            return [
-                [
-                    [1,1],
-                    [1,1]
-                ]
-            ]
-        elif self.block_type=="S":
-            self.block_height=3
-            if self.rotation==0:
-                self.block_width=2
-                self.block_indices = [[3,4],[1,2,4]]
-            self.right_most_blocks = [1,3]
-            self.left_most_blocks = [3,0]
-            return [
-                [[0,1,1],
-                 [0,1,0],
-                 [1,1,0]],
-                [[1, 0, 0],
-                 [1, 1, 1],
-                 [0, 0, 1]],
-            ]
-        elif self.block_type=="Z":
-            self.block_height=3
-            if self.rotation==0:
-                self.block_width=2
-                self.block_indices = [[0,3,4],[2,3,4]]
-            self.right_most_blocks = [4,0]
-            self.left_most_blocks = [0,1]
-            return [
-                [[1,1,0],
-                 [0,1,0],
-                 [0,1,1]],
-                [[0, 0, 1],
-                 [1, 1, 1],
-                 [1, 0, 0]]
-            ]
-        elif self.block_type=="T":
-            self.block_height=2
-            if self.rotation == 0:
-                self.block_width = 3
-                self.block_indices = [[1,2,3],[2,3],[0,2,3],[1,3]]
-            self.right_most_blocks = [3,2,2,0]
-            self.left_most_blocks = [1,0,0,1]
-            return [
-                [[0, 1, 0],
-                 [1, 1, 1],
-                 [0, 0, 0]],
-                [[0, 1, 0],
-                 [0, 1, 1],
-                 [0, 1, 0]],
-                [[0, 0, 0],
-                 [1, 1, 1],
-                 [0, 1, 0]],
-                [[0, 1, 0],
-                 [1, 1, 0],
-                 [0, 1, 0]],
-            ]
-
-    def create_block_list(self):
-        self._blocks = []
-        for i in range(len(self.block_shape[self.rotation])):
-            for j in range(len(self.block_shape[self.rotation][i])):
-                if self.block_shape[self.rotation][i][j] == 1:
-                    rect_obj = pygame.Rect(self.x+self.grid_size*j,self.y+self.grid_size*i,self.grid_size,self.grid_size)
-                    self._blocks.append(rect_obj)
+LINE_CLEAR_REWARD = {0: 0.0, 1: 1.0, 2: 3.0, 3: 5.0, 4: 8.0}
 
 
-    def control_block(self,move):
-        if move == "right":
-            check_block = self._blocks[self.right_most_blocks[self.rotation]]
-            self.movable_right = True
-            if ((check_block.x-self.margin_left)//self.grid_size)<len(self.grid[0]):
-                if self.grid[((check_block.y-self.margin_top)//self.grid_size)-1][((check_block.x-self.margin_left)//self.grid_size)] == 0:
-                    self.movable_right = True
-                else:
-                    self.movable_right = False
-            else:
-                self.movable_right = False
-
-            if self.movable_right:
-                for rect_obj in self._blocks:
-                    self.grid[self.grid == 1] = 0
-                    rect_obj.x+=self.grid_size
+@dataclass
+class StepResult:
+    state: np.ndarray
+    reward: float
+    done: bool
+    info: Dict[str, Union[int, str, float]]
 
 
-        if move == "left":
-            self.movable_left = True
-            check_block = self._blocks[self.left_most_blocks[self.rotation]]
-            if ((check_block.x-self.margin_left)//self.grid_size)-2>=0:
-                if self.grid[((check_block.y-self.margin_top)//self.grid_size)][((check_block.x-self.margin_left)//self.grid_size)-2] == 0:
-                    self.movable_left = True
-                else:
-                    self.movable_left = False
-            else:
-                self.movable_left = False
+class TetrisEnv:
+    """
+    Headless Tetris environment for AI training.
 
-            if self.movable_left:
-                for rect_obj in self._blocks:
-                    self.grid[self.grid == 1] = 0
-                    rect_obj.x-=self.grid_size
+    State format:
+    - state[0]: locked blocks on the board (0/1)
+    - state[1]: current falling piece occupancy (0/1)
+    shape: (2, rows, cols)
+    """
 
+    def __init__(self, rows: int = 20, cols: int = 10, seed: int | None = None) -> None:
+        self.rows = rows
+        self.cols = cols
+        self.random = random.Random(seed)
+        self.board = np.zeros((rows, cols), dtype=np.int8)
+        self.action_space_n = 6
+        self._bag: List[str] = []
 
+        self.score = 0
+        self.lines_cleared = 0
+        self.steps = 0
+        self.done = False
 
-    def rotate_block(self):
-        self.prev_rotation = self.rotation
-        #clamp the rotation to length of the block shape
-        # checking for corner cases:
-        # right corner:
-        right_block = self._blocks[self.right_most_blocks[self.rotation]]
-        if (right_block.x -self.margin_left)//self.grid_size == len(self.grid[0]):
-            return False
-        # left corner:
-        left_block = self._blocks[self.left_most_blocks[self.rotation]]
-        if (left_block.x -self.margin_left)//self.grid_size == 0:
-            return False
+        self.current_kind = ""
+        self.current_rotation = 0
+        self.current_x = 0
+        self.current_y = 0
 
-        if self.rotation+1 < len(self.block_indices):
-            self.rotation+=1
-        else:
-            self.rotation = 0
-        self.y = self._blocks[0].y
-        self.x = self._blocks[0].x
-        self.prev_y = self.y
-        self.prev_x = self.x
-        self.create_block_list()
+        self.reset()
 
-        # checking if the rotation is valid or not
-        for rect_obj in self._blocks:
-            block_row = ((rect_obj.y-self.margin_top)//self.grid_size)-1
-            block_col = ((rect_obj.x-self.margin_left)//self.grid_size)-1
+    def reset(self) -> np.ndarray:
+        self.board.fill(0)
+        self.score = 0
+        self.lines_cleared = 0
+        self.steps = 0
+        self.done = False
+        self._bag = []
+        self._spawn_piece()
+        return self.get_state()
 
-            if (block_row < 0 or block_col < 0 ) or (block_row >= len(self.grid) or block_col >= len(self.grid[0])):
-                self.rotation = self.prev_rotation
+    def _refill_bag(self) -> None:
+        self._bag = list(PIECES.keys())
+        self.random.shuffle(self._bag)
 
-                self.x = self.prev_x
-                self.y = self.prev_y
-                self.create_block_list()
+    def _piece_cells(
+        self, kind: str, rotation: int, x: int, y: int
+    ) -> List[Tuple[int, int]]:
+        return [(x + dx, y + dy) for dx, dy in PIECES[kind][rotation]]
 
+    def _is_valid(self, cells: List[Tuple[int, int]]) -> bool:
+        for x, y in cells:
+            if x < 0 or x >= self.cols or y >= self.rows:
                 return False
-            if not self.grid[block_row][block_col] == 0:
-                self.rotation = self.prev_rotation
-                self.x = self.prev_x
-                self.y = self.prev_y
-                self.create_block_list()
-
+            if y >= 0 and self.board[y, x] == 1:
                 return False
-
         return True
 
+    def _spawn_piece(self) -> bool:
+        if not self._bag:
+            self._refill_bag()
 
-    def ghost_piece(self):
-        offset = 0
-        while True:
-            collision = False
-            for idx in self.block_indices[self.rotation]:
-                check_block = self._blocks[idx]
+        self.current_kind = self._bag.pop()
+        self.current_rotation = 0
+        self.current_x = (self.cols // 2) - 2
+        self.current_y = -1
 
-                check_block_x = (((check_block.x - self.margin_left))//self.grid_size) - 1
-                check_block_y = (((check_block.y-self.margin_top))//self.grid_size)+(offset+1)
+        if not self._is_valid(self.active_cells):
+            self.done = True
+            return False
+        return True
 
-                if check_block_y >= self.num_grid_rows:
-                    collision = True
+    @property
+    def active_cells(self) -> List[Tuple[int, int]]:
+        return self._piece_cells(
+            self.current_kind,
+            self.current_rotation,
+            self.current_x,
+            self.current_y,
+        )
+
+    def _try_move(self, dx: int, dy: int, rotation_delta: int = 0) -> bool:
+        new_rotation = (self.current_rotation + rotation_delta) % len(PIECES[self.current_kind])
+        new_x = self.current_x + dx
+        new_y = self.current_y + dy
+        cells = self._piece_cells(self.current_kind, new_rotation, new_x, new_y)
+
+        if not self._is_valid(cells):
+            return False
+
+        self.current_rotation = new_rotation
+        self.current_x = new_x
+        self.current_y = new_y
+        return True
+
+    def _clear_lines(self) -> int:
+        full_mask = np.all(self.board == 1, axis=1)
+        cleared = int(np.sum(full_mask))
+        if cleared == 0:
+            return 0
+
+        remaining = self.board[~full_mask]
+        new_rows = np.zeros((cleared, self.cols), dtype=np.int8)
+        self.board = np.vstack((new_rows, remaining))
+        return cleared
+
+    def _lock_piece(self) -> int:
+        for x, y in self.active_cells:
+            if y < 0:
+                self.done = True
+                return 0
+            self.board[y, x] = 1
+
+        cleared = self._clear_lines()
+        self.lines_cleared += cleared
+        self.score += [0, 100, 300, 500, 800][cleared]
+        self._spawn_piece()
+        return cleared
+
+    def get_state(self) -> np.ndarray:
+        state = np.zeros((2, self.rows, self.cols), dtype=np.float32)
+        state[0] = self.board
+        for x, y in self.active_cells:
+            if 0 <= y < self.rows:
+                state[1, y, x] = 1.0
+        return state
+
+    def get_state_dict(self) -> Dict[str, Union[np.ndarray, str, int, bool]]:
+        return {
+            "board": self.board.copy(),
+            "active_cells": np.array(self.active_cells, dtype=np.int16),
+            "piece": self.current_kind,
+            "rotation": self.current_rotation,
+            "score": self.score,
+            "lines_cleared": self.lines_cleared,
+            "done": self.done,
+        }
+
+    def sample_action(self) -> int:
+        return self.random.randint(0, self.action_space_n - 1)
+
+    def step(self, action: Action = 0) -> StepResult:
+        if self.done:
+            return StepResult(self.get_state(), 0.0, True, self._build_info())
+
+        self.steps += 1
+        action_id = ACTIONS.get(action, 0)
+        reward = 0.0
+        locked_this_step = False
+
+        if action_id == 1:
+            self._try_move(-1, 0)
+        elif action_id == 2:
+            self._try_move(1, 0)
+        elif action_id == 3:
+            self._try_move(0, 0, rotation_delta=1)
+        elif action_id == 4:
+            moved = self._try_move(0, 1)
+            if moved:
+                reward += 0.02
+            else:
+                cleared = self._lock_piece()
+                reward += LINE_CLEAR_REWARD[cleared]
+                locked_this_step = True
+        elif action_id == 5:
+            drop_distance = 0
+            while self._try_move(0, 1):
+                drop_distance += 1
+            cleared = self._lock_piece()
+            reward += 0.02 * drop_distance + LINE_CLEAR_REWARD[cleared]
+            locked_this_step = True
+
+        # Gravity tick: one downward move per environment step.
+        if not self.done and not locked_this_step:
+            if not self._try_move(0, 1):
+                cleared = self._lock_piece()
+                reward += LINE_CLEAR_REWARD[cleared]
+
+        if self.done:
+            reward -= 2.0
+
+        return StepResult(
+            state=self.get_state(),
+            reward=reward,
+            done=self.done,
+            info=self._build_info(),
+        )
+
+    def get_all_possible_placements(self) -> List[Dict]:
+        """
+        Compute all possible landing configurations for the current falling piece.
+        
+        Returns a list of placement dicts, each containing:
+        - board_after: np.ndarray – the board state after piece lands
+        - final_rotation: int – rotation index of piece at landing
+        - final_x: int – x position of piece at landing
+        - moves: List[int] – sequence of action IDs to reach this placement
+        - lines_cleared: int – number of lines that would clear
+        - resulting_score: int – score if this placement is taken
+        
+        Sorted by x position and rotation for consistency.
+        Model can then score each and pick the best one.
+        """
+        placements = []
+        
+        # Save current state to restore later
+        saved_rotation = self.current_rotation
+        saved_x = self.current_x
+        saved_y = self.current_y
+        saved_board = self.board.copy()
+        
+        piece = self.current_kind
+        max_rotations = len(PIECES[piece])
+        
+        # Try all rotations
+        for rotation in range(max_rotations):
+            # Try all x positions
+            for x in range(-2, self.cols + 2):
+                # Simulate placing this piece at (x, rotation)
+                self.current_rotation = rotation
+                self.current_x = x
+                self.current_y = -1
+                
+                # Check if starting position is valid
+                if not self._is_valid(self.active_cells):
+                    continue
+                
+                # Drop piece to bottom (simulate hard drop)
+                drop_distance = 0
+                while self._try_move(0, 1):
+                    drop_distance += 1
+                
+                # Check if piece is still valid after drop (shouldn't fail, but safety check)
+                if not self._is_valid(self.active_cells):
+                    self.current_rotation = saved_rotation
+                    self.current_x = saved_x
+                    self.current_y = saved_y
+                    self.board = saved_board.copy()
+                    continue
+                
+                # Lock the piece and compute resulting board state
+                board_before_lock = self.board.copy()
+                for px, py in self.active_cells:
+                    if py >= 0:
+                        self.board[py, px] = 1
+                
+                lines_cleared = self._clear_lines()
+                resulting_score = self.score + [0, 100, 300, 500, 800][lines_cleared]
+                
+                # Record this placement
+                placements.append({
+                    "board_after": self.board.copy(),
+                    "board_before": board_before_lock.copy(),
+                    "final_rotation": rotation,
+                    "final_x": x,
+                    "lines_cleared": lines_cleared,
+                    "resulting_score": resulting_score,
+                })
+                
+                # Restore board for next iteration
+                self.board = saved_board.copy()
+        
+        # Restore original state
+        self.current_rotation = saved_rotation
+        self.current_x = saved_x
+        self.current_y = saved_y
+        self.board = saved_board
+        
+        return placements
+    
+    def execute_placement(self, final_rotation: int, final_x: int) -> StepResult:
+        """
+        Execute moves to reach a specific placement (rotation, x) and hard-drop.
+        Returns the step result after landing.
+        
+        This is useful after the model picks the best placement from
+        get_all_possible_placements().
+        """
+        # Rotate to target rotation
+        while self.current_rotation != final_rotation:
+            self._try_move(0, 0, rotation_delta=1)
+        
+        # Move to target x position
+        if self.current_x < final_x:
+            while self.current_x < final_x:
+                if not self._try_move(1, 0):
                     break
-                if check_block_y >=0:
-                    if self.grid[check_block_y][check_block_x] == 2:
-                        collision = True
-                        break
+        elif self.current_x > final_x:
+            while self.current_x > final_x:
+                if not self._try_move(-1, 0):
+                    break
+        
+        # Hard drop
+        return self.step(5)
 
-            if collision:
-                print("calculated the ghost piece")
-                break
-            offset+= 1
-        ghost_rects = []
-        for rect in self._blocks:
-            ghost_rect = rect.copy()
-            ghost_rect.y += (offset*self.grid_size)
-            ghost_rect.x -= self.grid_size
-            ghost_rects.append(ghost_rect)
-        return ghost_rects
-
-
-class game:
-    def __init__(self):
-        self.FPS = 60
-        self.score = 0
-
-        self.num_grid_cols = 10
-        self.num_grid_rows = 20
-        self.margin_left = 40
-        self.margin_top = 40
-        self.margin_bottom = 10
-        self.side_panel_width = 250
-        self.grid_size = 40
-        self.speed = 350
-
-        self.HEIGHT = (self.grid_size * self.num_grid_rows) + self.margin_top + self.margin_bottom
-        self.WIDTH = (self.grid_size * self.num_grid_cols) + self.margin_left + self.side_panel_width
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-        self.running = True
-        self.clock = pygame.time.Clock()
-
-        self.grid = np.zeros((self.num_grid_rows,self.num_grid_cols))
-        self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
-        self.pieces = []
-        self.collision_blocks = []
-        self.start_time = 0
-
-
-    def draw_grid(self):
-        for i ,col in enumerate(self.grid):
-            for j ,cell in enumerate(col):
-                if cell == 0:
-                    pygame.draw.rect(self.screen, "white", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-                elif cell == 1:
-                    pygame.draw.rect(self.screen, "red", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-                elif cell == 2:
-                    pygame.draw.rect(self.screen, "green", pygame.Rect(self.margin_left + (self.grid_size * j), self.margin_top + (self.grid_size * i), self.grid_size, self.grid_size))
-
-
-        if self.init_block is not None:
-            # calculating the ghost piece position only once
-            if self.init_block.ghost_rects == []:
-                ghost_rects = self.init_block.ghost_piece()
-
-            for rect in ghost_rects:
-                pygame.draw.rect(self.screen,(128,128,128),rect,width=2)
-
-
-
-    def check_rows(self):
-        non_full_rows = self.grid[~((self.grid == 2).all(axis=1))]
-        rows_cleared = self.grid.shape[0] - non_full_rows.shape[0]
-        if rows_cleared > 0:
-            new_rows = np.zeros((rows_cleared, self.grid.shape[1]))
-            self.grid = np.vstack((new_rows, non_full_rows))
-            self.speed -= 25
-            if not self.speed >0:
-                self.speed = 0
-
-            self.score+=100*rows_cleared
-            pygame.display.set_caption(
-                f"Tetris | Score: {self.score}"
-            )
-            self.update_grid()
-
-    def update_grid(self):
-        # block spawner
-        try:
-            if self.init_block is not None:
-                self.block_data = self.init_block._blocks
-                self.grid[self.grid==1]=0
-
-                for rect_obj in self.init_block._blocks:
-                    if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
-                        if ((rect_obj.y - self.margin_top) // self.grid_size) - 1 < len(self.grid) and ((rect_obj.x - self.margin_left) // self.grid_size) - 1 <= len(self.grid[0]):
-                            self.grid[((rect_obj.y - self.margin_top) // self.grid_size) - 1][
-                                ((rect_obj.x - self.margin_left) // self.grid_size) - 1] = 1
-
-            else:
-                for rect_obj in self.block_data:
-                    self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 2
-
-                # game over logic
-                self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
-
-                for rect_obj in self.init_block._blocks:
-                    if ((rect_obj.y-self.margin_top)//self.grid_size)-1 >=0:
-                        if self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] !=0:
-                            self.running = False
-                            print("Game Over!")
-                            break
-        except Exception as e:
-            print("error,",e)
-
-    def block_move(self):
-        if self.init_block is not None:
-            self.block_data = self.init_block._blocks
-            last_block = self.block_data[-1]
-            # checking if the last block has reached the bottom or not
-            if (last_block.y-self.margin_top)//self.grid_size<=(self.num_grid_rows)-1 :
-                # if the block hasnt reached the bottom we check what's beneath the last piece of the block
-                self.move = True
-                for i in self.init_block.block_indices[self.init_block.rotation]:
-
-                    checking_block = self.block_data[i]
-                    col = ((checking_block.x -self.margin_left)//self.grid_size)-1
-                    row = ((checking_block.y-self.margin_top)//self.grid_size)
-
-                    if row <= len(self.grid):
-                        if self.grid[row][col] == 2:
-                            self.move = False
-
-                if self.move:
-                    for rect_obj in self.block_data:
-                        self.grid[((rect_obj.y-self.margin_top)//self.grid_size)-1][((rect_obj.x-self.margin_left)//self.grid_size)-1] = 0
-                        rect_obj.y+=self.grid_size
-
-                else:
-                    self.init_block = None
-            else:
-                self.init_block = None
-        else:
-            self.init_block = block(self.grid_size*5,0,self.screen,self.grid_size,self.grid,self.margin_top)
-
-
-    def visual_run(self):
-        print("mode:visual")
-        self.start_time = pygame.time.get_ticks()
-        while self.running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_d:
-                        self.speed-=25
-                        self.score += 100
-                        self.update_grid()
-                    if event.key == pygame.K_RIGHT:
-                        if self.init_block is not None:
-                            self.init_block.control_block("right")
-                        self.update_grid()
-
-                    if event.key == pygame.K_LEFT:
-                        if self.init_block is not None:
-                            self.init_block.control_block("left")
-                        self.update_grid()
-
-
-                    if event.key == pygame.K_UP:
-                        if self.init_block is not None:
-                            self.grid[self.grid == 1] = 0
-
-                        rotation_done = self.init_block.rotate_block()
-                        if rotation_done:
-                            print("block rotated")
-                        else:
-                            print("Block cant be rotated")
-                        self.update_grid()
-
-                    if event.key == pygame.K_DOWN:
-                        if self.init_block !=  None:
-                            self.block_move()
-
-
-
-
-            self.screen.fill("black")
-            if self.start_time + self.speed < pygame.time.get_ticks():
-                self.start_time = pygame.time.get_ticks()
-                self.check_rows()
-                self.block_move()
-
-            self.update_grid()
-            self.draw_grid()
-
-            pygame.display.update()
-            self.clock.tick(self.FPS)
-
-
-
-if __name__=="__main__":
-    game = game()
-    game.visual_run()
+    def _build_info(self) -> Dict[str, Union[int, str, float]]:
+        return {
+            "score": self.score,
+            "lines_cleared": self.lines_cleared,
+            "steps": self.steps,
+            "piece": self.current_kind,
+        }

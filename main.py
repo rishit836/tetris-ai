@@ -1,302 +1,158 @@
-import pygame
-import os
 import sys
-import random
+from typing import List, Tuple
 
-class block:
-    instances = []
-    moving_instance = None
-    def __init__(self,x,y,block_type,screen,grid_size,grid):
-        self.screen=screen
+import pygame
 
-        self.block_type=block_type
-        self.grid_state = grid
-        self.grid_size = grid_size
-        self.instances.append(self)
-        self.rotation=0
-        self.color= self.get_color()
-        self.shapes= self.get_shapes()
-        self.x = x
-        self.y = y - (self.grid_size*(self.block_height+1))
-        self.current_shape=self.shapes[self.rotation]
-        self._block = []
-        self.moving =True
-        self.falling_black = True
-        self.block_height = 0
-        self.block_width = 0
+from tetris import TetrisEnv
 
 
-    def get_color(self):
-        if self.block_type=="I":
-            return "blue"
-        elif self.block_type=="J":
-            return "green"
-        elif self.block_type=="L":
-            return "red"
-        elif self.block_type=="O":
-            return "yellow"
-        elif self.block_type=="S":
-            return "purple"
-        elif self.block_type=="Z":
-            return "orange"
-        elif self.block_type=="T":
-            return "cyan"
-        else:
-            return "white"
-    def get_shapes(self):
-        if self.block_type=="I":
-            self.block_height=0
-            return [
-                [[0,0,0,0],
-                [0,0,0,0],
-                [1,1,1,1],
-                [0,0,0,0]],
-
-                [[0,0,1,0],
-                 [0,0,1,0],
-                 [0,0,1,0],
-                 [0,0,1,0]]
-            ]
-        elif self.block_type=="J":
-            self.block_height=2
-            return [
-                [
-                    [1,0,0],
-                    [1,1,1],
-                    [0,0,0]
-                 ],
-                [
-                    [0, 1, 1],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 1],
-                    [0, 0, 1]
-                ]
-                ,
-                [[0,1,0],
-                 [0,1,0],
-                 [1,1,0]],
-            ]
-        elif self.block_type=="L":
-            self.block_height=3
-            return [
-                [
-                    [0,1,0],
-                    [0,1,0],
-                    [0,1,1]
-                ],
-                [
-                    [0,0,0],
-                    [1,1,1],
-                    [1,0,0]
-                ],
-                [
-                    [1, 1, 0],
-                    [0, 1, 0],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 1],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ],
-            ]
-        elif self.block_type=="O":
-            self.block_height=2
-            return [
-                [
-                    [1,1],
-                    [1,1]
-                ]
-            ]
-        elif self.block_type=="S":
-            self.block_height=3
-            return [
-                [[0,1,1],
-                 [0,1,0],
-                 [1,1,0]],
-                [[1, 0, 0],
-                 [1, 1, 1],
-                 [0, 0, 1]],
-            ]
-        elif self.block_type=="Z":
-            self.block_height=3
-            return [
-                [[1,1,0],
-                 [0,1,0],
-                 [0,1,1]],
-                [[0, 0, 1],
-                 [1, 1, 1],
-                 [1, 0, 0]]
-            ]
-        elif self.block_type=="T":
-            self.block_height=2
-            return [
-                [[0, 1, 0],
-                 [1, 1, 1],
-                 [0, 0, 0]],
-                [[0, 1, 0],
-                 [0, 1, 1],
-                 [0, 1, 0]],
-                [[0, 0, 0],
-                 [1, 1, 1],
-                 [0, 1, 0]],
-                [[0, 1, 0],
-                 [1, 1, 0],
-                 [0, 1, 0]],
-            ]
-
-    def draw_piece(self):
-        self._block = []
-        for i,row in enumerate(self.current_shape):
-            for j,col in enumerate(row):
-                if col == 1:
-                    pygame.draw.rect(self.screen,self.color,pygame.Rect(self.x+(j*self.grid_size),self.y+(i*self.grid_size),self.grid_size,self.grid_size))
-                    self._block.append(pygame.Rect(self.x+(j*self.grid_size),self.y+(i*self.grid_size),self.grid_size,self.grid_size))
-
-    def set_move(self):
-        for object in self.instances:
-
-            if object == self:
-                continue
-            else:
-                if object.x == self.x and object.y == self.y:
-                    # print("collision")
-                    self.moving = False
-                    self.falling_black = False
-    def move(self):
-        if self.moving and self._block[-1].center[1]<self.grid_size*20:
-            self.set_move()
-            self.y+=self.grid_size
-        else:
-            self.moving=False
-            self.grid_state=self.update_grid()
-            # print(self.grid_state)
-
-    def update_grid(self):
-        # for r in range(len(self.grid_state)):
-        #     for c in range(len(self.grid_state[r])):
-        #         if self.grid_state[r][c] == "B":
-        #             self.grid_state[r][c] = 0
-
-        for b in self._block:
-            base_row = b.center[1] // self.grid_size
-            base_col = b.center[0] // self.grid_size
-            print(base_row, base_col)
-            print(b.x,b.y)
+PIECE_COLORS = {
+    "I": (69, 123, 157),
+    "J": (29, 53, 87),
+    "L": (230, 111, 81),
+    "O": (233, 196, 106),
+    "S": (42, 157, 143),
+    "Z": (214, 40, 40),
+    "T": (106, 76, 147),
+}
 
 
-
-        # Compute grid indices from pixel x, y and grid_size
-        # base_row = self.y // self.grid_size
-        # base_col = self.x // self.grid_size
-        #
-        # # Stamp current shape into the grid as "B"
-        # for i, row in enumerate(self.current_shape):
-        #     for j, val in enumerate(row):
-        #         if val == 1:
-        #
-        #             gr = base_row + i
-        #             gc = base_col + j
-        #             if gr < 0 or gr >= len(self.grid_state) or gc < 0 or gc >= len(self.grid_state[0]):
-        #                 continue
-        #             self.grid_state[gr][gc] = "B"
-
-        return self.grid_state
-
-class block_spawner():
-    def __init__(self,grid_size,block_types,screen,grid):
-        self.grid_size = grid_size
-        self.block_types = block_types
-        self.screen = screen
-        self.block_type = random.choice(self.block_types)
-        self.grid = grid
-        self.init_block = block(self.grid_size*4,self.grid_size*1,self.block_type,self.screen,self.grid_size,self.grid)
-        self.init_block.moving = True
-        self.init_block.draw_piece()
-
-    def update_block(self):
-        if  self.init_block.moving:
-            self.init_block.move()
-            self.init_block.draw_piece()
-        else:
-            self.block_type = random.choice(self.block_types)
-
-            self.init_block = block(self.grid_size * 4, self.grid_size * 1, self.block_type, self.screen,
-                                    self.grid_size, self.grid)
-            self.init_block.draw_piece()
-
-class Game:
-    def __init__(self):
+class TetrisRenderer:
+    def __init__(
+        self,
+        env: TetrisEnv,
+        cell_size: int = 32,
+        margin: int = 20,
+        fps: int = 60,
+        tick_ms: int = 120,
+    ) -> None:
         pygame.init()
+        self.env = env
+        self.cell_size = cell_size
+        self.margin = margin
+        self.fps = fps
+        self.tick_ms = tick_ms
 
-        self.FPS = 60
-        self.score = 0
-
-        self.num_grid_cols= 10
-        self.num_grid_rows = 20
-        self.margin_left = 40
-        self.margin_top = 40
-        self.margin_bottom = 10
-        self.side_panel_width = 250
-        self.grid_size = 40
-
-        self.HEIGHT = (self.grid_size*self.num_grid_rows) + self.margin_top + self.margin_bottom
-        self.WIDTH = (self.grid_size*self.num_grid_cols) + self.margin_left +self.side_panel_width
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-        self.running = True
+        width = self.margin * 2 + env.cols * self.cell_size + 180
+        height = self.margin * 2 + env.rows * self.cell_size
+        self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("consolas", 22)
+        self.running = True
 
-        self.grid = []
-        self.create_grid()
-        self.pieces = []
+    def _to_rect(self, x: int, y: int) -> pygame.Rect:
+        return pygame.Rect(
+            self.margin + x * self.cell_size,
+            self.margin + y * self.cell_size,
+            self.cell_size,
+            self.cell_size,
+        )
 
-    def create_grid(self):
-        self.grid=[]
-        for column in range(0,self.num_grid_cols):
-            column=[]
-            for row in range(0,self.num_grid_rows):
-                column.append(0)
-            self.grid.append(column)
+    def _draw_board(self) -> None:
+        self.screen.fill((15, 18, 22))
 
-        print("grid created")
+        # Locked board cells.
+        for y in range(self.env.rows):
+            for x in range(self.env.cols):
+                rect = self._to_rect(x, y)
+                pygame.draw.rect(self.screen, (35, 40, 48), rect, width=1)
+                if self.env.board[y, x] == 1:
+                    pygame.draw.rect(self.screen, (100, 175, 255), rect.inflate(-2, -2))
 
+        # Active falling piece cells.
+        piece_color = PIECE_COLORS.get(self.env.current_kind, (240, 240, 240))
+        for x, y in self.env.active_cells:
+            if y < 0:
+                continue
+            pygame.draw.rect(self.screen, piece_color, self._to_rect(x, y).inflate(-2, -2))
 
-    def draw_grid(self):
-        for column in range(0,self.num_grid_cols+1):
-            for row in range(0,self.num_grid_rows+1):
-                pygame.draw.line(self.screen,"white",(self.margin_left,self.margin_top+(self.grid_size*row)),(self.margin_left+(self.grid_size*column),self.margin_top+self.grid_size*row))
-                pygame.draw.line(self.screen,"white",(self.margin_left+(self.grid_size*column),self.margin_top),(self.margin_left+(self.grid_size*column),self.margin_top+self.grid_size*self.num_grid_rows))
+        hud_x = self.margin * 2 + self.env.cols * self.cell_size
+        hud_lines: List[Tuple[str, int]] = [
+            ("TETRIS", 0),
+            (f"Score: {self.env.score}", 2),
+            (f"Lines: {self.env.lines_cleared}", 3),
+            (f"Piece: {self.env.current_kind}", 4),
+            ("", 5),
+            ("Controls", 6),
+            ("Left/Right", 7),
+            ("Up = Rotate", 8),
+            ("Down = Soft", 9),
+            ("Space = Hard", 10),
+            ("R = Reset", 11),
+            ("Esc = Quit", 12),
+        ]
+        for text, row in hud_lines:
+            if text:
+                surface = self.font.render(text, True, (225, 230, 240))
+                self.screen.blit(surface, (hud_x, self.margin + row * 28))
 
+        if self.env.done:
+            overlay = self.font.render("GAME OVER", True, (255, 120, 120))
+            self.screen.blit(
+                overlay,
+                (self.margin + 2 * self.cell_size, self.margin + self.env.rows * self.cell_size // 2),
+            )
 
-    def visual_run(self):
-        print("mode:visual")
-        spawner = block_spawner(self.grid_size,["I","J","L","O","S","Z","T"],self.screen,self.grid)
-        start = pygame.time.get_ticks()
+    def run(self) -> None:
+        action = 0
+        last_tick = pygame.time.get_ticks()
+        self.env.reset()
+
         while self.running:
             for event in pygame.event.get():
-                if event.type==pygame.QUIT:
-                    self.running=False
-                    sys.exit()
-            if pygame.time.get_ticks()-start >= 250:
-                self.screen.fill("black")
-                spawner.update_block()
-                start = pygame.time.get_ticks()
+                if event.type == pygame.QUIT:
+                    self.running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.running = False
+                    elif event.key == pygame.K_r:
+                        self.env.reset()
+                    elif event.key == pygame.K_LEFT:
+                        action = 1
+                    elif event.key == pygame.K_RIGHT:
+                        action = 2
+                    elif event.key == pygame.K_UP:
+                        action = 3
+                    elif event.key == pygame.K_DOWN:
+                        action = 4
+                    elif event.key == pygame.K_SPACE:
+                        action = 5
 
+            now = pygame.time.get_ticks()
+            if now - last_tick >= self.tick_ms:
+                if not self.env.done:
+                    self.env.step(action)
+                action = 0
+                last_tick = now
 
-
-
-            # pygame.time.delay(300)
-
-
-                self.draw_grid()
+            self._draw_board()
             pygame.display.flip()
-            self.clock.tick(self.FPS)
+            self.clock.tick(self.fps)
+
+        pygame.quit()
 
 
-if __name__=="__main__":
-    game = Game()
-    Game.visual_run(game)
+def run_headless_training_demo(episodes: int = 5, max_steps: int = 2000) -> None:
+    env = TetrisEnv(seed=42)
+    for episode in range(1, episodes + 1):
+        state = env.reset()
+        total_reward = 0.0
+        for _ in range(max_steps):
+            action = env.sample_action()
+            result = env.step(action)
+            state = result.state
+            total_reward += result.reward
+            if result.done:
+                break
+        print(
+            f"Episode {episode}: score={env.score}, lines={env.lines_cleared}, "
+            f"reward={total_reward:.2f}, state_shape={state.shape}"
+        )
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1].lower() in {"train", "headless"}:
+        run_headless_training_demo()
+    else:
+        app = TetrisRenderer(TetrisEnv())
+        app.run()
